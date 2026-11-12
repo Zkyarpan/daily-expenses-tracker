@@ -1,32 +1,88 @@
+import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
-export function middleware(request: NextRequest) {
-  console.log("=== MIDDLEWARE START ===");
-  console.log("Path:", request.nextUrl.pathname);
-  console.log("APP_PASSWORD exists?", !!process.env.APP_PASSWORD);
+import { getSupabaseConfig, isSupabaseConfigured } from "@/utils/supabase/config";
 
-  const session = request.cookies.get("expense_session")?.value;
-  console.log("Session cookie:", session);
+/**
+ * Next.js 15 middleware — refreshes the Supabase session on every request
+ * and enforces route-level authentication.
+ *
+ * Protected routes: everything except /login, /signup, /forgot-password,
+ * /auth/callback, and static assets.
+ */
+export async function middleware(request: NextRequest) {
+  // If Supabase is not configured we allow all routes through (demo mode).
+  if (!isSupabaseConfigured) return NextResponse.next();
 
-  // Skip middleware for login page and auth API
-  if (
-    request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/api/auth")
-  ) {
-    console.log("→ Allowing:", request.nextUrl.pathname);
-    return NextResponse.next();
+  const { supabaseKey, supabaseUrl } = getSupabaseConfig();
+
+  let supabaseResponse = NextResponse.next({ request });
+
+  const supabase = createServerClient(supabaseUrl, supabaseKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) =>
+          request.cookies.set(name, value),
+        );
+        supabaseResponse = NextResponse.next({ request });
+        cookiesToSet.forEach(({ name, options, value }) =>
+          supabaseResponse.cookies.set(name, value, options),
+        );
+      },
+    },
+  });
+
+  // IMPORTANT: do not add logic between createServerClient and getUser.
+  // See: https://supabase.com/docs/guides/auth/server-side/nextjs
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { pathname } = request.nextUrl;
+
+  const isAuthRoute =
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/signup") ||
+    pathname.startsWith("/forgot-password") ||
+    pathname.startsWith("/auth/callback");
+
+  const isPublicAsset =
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon") ||
+    pathname.startsWith("/api/");
+
+  if (isPublicAsset) return supabaseResponse;
+
+  // Authenticated user trying to access auth pages → redirect to dashboard
+  if (user && isAuthRoute) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url);
   }
 
-  // If no valid session, redirect to login
-  if (session !== process.env.APP_PASSWORD) {
-    console.log("→ Redirecting to /login");
-    return NextResponse.redirect(new URL("/login", request.url));
+  // Unauthenticated user trying to access protected pages → redirect to login
+  if (!user && !isAuthRoute) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    // Preserve intended destination so we can redirect after login
+    url.searchParams.set("next", pathname);
+    return NextResponse.redirect(url);
   }
 
-  console.log("→ Allowing with valid session");
-  return NextResponse.next();
+  return supabaseResponse;
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    /*
+     * Match all request paths except:
+     * - _next/static (static files)
+     * - _next/image (image optimisation)
+     * - favicon.ico, sitemap.xml, robots.txt
+     */
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };

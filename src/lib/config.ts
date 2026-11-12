@@ -70,10 +70,10 @@ interface LocaleConfig {
 
 // Change these values to configure locale and currency
 export const LOCALE_CONFIG: LocaleConfig = {
-  currency: "USD",
-  locale: "en-US",
+  currency: "GBP",
+  locale: "en-GB",
   style: "currency" as const,
-  symbol: "$",
+  symbol: "£",
 } as const;
 
 // Map by category name

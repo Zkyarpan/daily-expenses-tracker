@@ -1,11 +1,19 @@
+"use client";
+
 import {
-  Download,
+  BarChart3,
+  LayoutDashboard,
+  LineChart,
   ListChecks,
-  Receipt,
-  TrendingUp,
+  PiggyBank,
+  ReceiptText,
+  Upload,
   Wallet,
 } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+import { SidebarUserMenu } from "@/components/auth/SidebarUserMenu";
 
 import {
   Sidebar,
@@ -19,43 +27,73 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
+  useSidebar,
 } from "../ui/sidebar";
 
-const items = [
+const primaryItems = [
   {
-    icon: Receipt,
+    icon: LayoutDashboard,
+    title: "Dashboard",
+    url: "/",
+  },
+  {
+    icon: ReceiptText,
     title: "Expenses",
-    url: "expenses",
+    url: "/expenses",
   },
   {
-    icon: TrendingUp,
-    title: "Yearly Charts",
-    url: "yearly-charts",
+    icon: PiggyBank,
+    title: "Budgets",
+    url: "/budgets",
   },
   {
-    icon: Download,
+    icon: LineChart,
+    title: "Analytics",
+    url: "/analytics",
+  },
+  {
+    icon: BarChart3,
+    title: "Yearly charts",
+    url: "/yearly-charts",
+  },
+  {
+    icon: Upload,
     title: "Import Expenses",
-    url: "import-expenses",
+    url: "/import-expenses",
   },
 ];
 
-const AppSideBar = () => {
+interface AppSideBarProps {
+  userEmail?: string;
+}
+
+const AppSideBar = ({ userEmail }: AppSideBarProps) => {
+  const pathname = usePathname();
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  const isRouteActive = (url: string) =>
+    url === "/" ? pathname === url : pathname === url || pathname.startsWith(`${url}/`);
+
+  const closeOnMobile = () => {
+    if (isMobile) setOpenMobile(false);
+  };
+
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader className="py-4">
+    <Sidebar collapsible="icon" variant="sidebar">
+      <SidebarHeader className="px-3 py-4">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild>
+            <SidebarMenuButton
+              asChild
+              onClick={closeOnMobile}
+              size="lg"
+              tooltip="Daily Expenses"
+            >
               <Link href="/">
-                {/* <Image
-                  src="/Images/logo.png"
-                  alt="logo"
-                  width={20}
-                  height={20}
-                  // className="light:#1111"
-                /> */}
-                <Wallet />
-                <span>Daily Expenses</span>
+                <span className="bg-primary text-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-lg">
+                  <Wallet className="size-4" />
+                </span>
+                <span className="font-semibold tracking-tight">Daily Expenses</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -64,13 +102,18 @@ const AppSideBar = () => {
       <SidebarSeparator />
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Application</SidebarGroupLabel>
+          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {primaryItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <Link href={item.url}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isRouteActive(item.url)}
+                    onClick={closeOnMobile}
+                    tooltip={item.title}
+                  >
+                    <Link href={item.url} aria-current={isRouteActive(item.url) ? "page" : undefined}>
                       <item.icon />
                       <span>{item.title}</span>
                     </Link>
@@ -82,14 +125,22 @@ const AppSideBar = () => {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Misc</SidebarGroupLabel>
+          <SidebarGroupLabel>Tools</SidebarGroupLabel>
 
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/trackers">
-                    <ListChecks /> Tracker
+                <SidebarMenuButton
+                  asChild
+                  isActive={isRouteActive("/trackers")}
+                  onClick={closeOnMobile}
+                  tooltip="Misc trackers"
+                >
+                  <Link
+                    href="/trackers"
+                    aria-current={isRouteActive("/trackers") ? "page" : undefined}
+                  >
+                    <ListChecks /> <span>Misc trackers</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -97,7 +148,15 @@ const AppSideBar = () => {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter />
+      <SidebarFooter className="px-3 pb-4">
+        <SidebarSeparator className="mb-2" />
+        <SidebarMenu>
+          {userEmail && <SidebarUserMenu />}
+        </SidebarMenu>
+        <div className="text-sidebar-foreground/50 mt-2 px-2 text-xs leading-5 group-data-[collapsible=icon]:hidden">
+          {userEmail ?? "Personal finance workspace"}
+        </div>
+      </SidebarFooter>
     </Sidebar>
   );
 };

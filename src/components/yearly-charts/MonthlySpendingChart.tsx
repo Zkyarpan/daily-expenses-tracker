@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { get } from "http";
 import { BarChart3, LineChart as LineChartIcon } from "lucide-react";
 import {
   Area,

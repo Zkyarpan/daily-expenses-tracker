@@ -55,7 +55,8 @@ const MonthYearSelector = ({
   };
 
   return (
-    <div className="flex items-center gap-2">
+    // flex-wrap: on narrow screens "Today" moves to a new line instead of overflowing.
+    <div className="flex flex-wrap items-center gap-2">
       <Button
         variant="outline"
         size="icon"

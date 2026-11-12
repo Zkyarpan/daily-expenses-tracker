@@ -3,6 +3,18 @@ import { supabase } from "@/lib/supabase";
 
 import { LOCALE_CONFIG } from "../config";
 
+// RLS on trackers / trackerEntries requires user_id = auth.uid() on insert,
+// so every insert sends the logged-in user's id explicitly.
+async function getAuthUserId(): Promise<string> {
+  if (!supabase) throw new Error("Supabase not initialized");
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+  if (error || !user) throw new Error("Not authenticated — please log in");
+  return user.id;
+}
+
 //
 // ---------- FETCH ALL TRACKERS WITH ENTRIES ----------
 //
@@ -24,6 +36,7 @@ export async function createTracker(
   tracker: Omit<Tracker, "id" | "createdAt" | "updatedAt">,
 ) {
   if (!supabase) throw new Error("Supabase not initialized");
+  const userId = await getAuthUserId();
   const { data, error } = await supabase
     .from("trackers")
     .insert([
@@ -33,6 +46,7 @@ export async function createTracker(
         description: tracker.description,
         initialBalance: tracker.initialBalance,
         title: tracker.title,
+        user_id: userId,
       },
     ])
     .select()
@@ -81,6 +95,7 @@ export async function addTrackerEntry(
   entry: Omit<TrackerEntry, "id" | "createdAt">,
 ) {
   if (!supabase) throw new Error("Supabase not initialized");
+  const userId = await getAuthUserId();
   const { data, error } = await supabase
     .from("trackerEntries")
     .insert([
@@ -91,6 +106,7 @@ export async function addTrackerEntry(
         debit: entry.debit,
         description: entry.description,
         trackerId: trackerId,
+        user_id: userId,
       },
     ])
     .select()
@@ -105,9 +121,10 @@ export async function createTrackerEntry(
   entry: Omit<TrackerEntry, "id">,
 ) {
   if (!supabase) throw new Error("Supabase not initialized");
+  const userId = await getAuthUserId();
   const { data, error } = await supabase
     .from("trackerEntries")
-    .insert([{ ...entry, trackerId: trackerId }])
+    .insert([{ ...entry, trackerId: trackerId, user_id: userId }])
     .select()
     .single();
 
@@ -213,6 +230,7 @@ export async function cleanupTrackerEntries(trackerId: string) {
         : `-${LOCALE_CONFIG.symbol}`
     }${Math.abs(currentBalance).toFixed(2)}`,
     trackerId: trackerId,
+    user_id: await getAuthUserId(),
   };
 
   const { error: insertError } = await supabase

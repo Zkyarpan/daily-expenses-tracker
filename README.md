@@ -14,7 +14,7 @@ A self-hosted expense tracker built with Next.js, Supabase, and shadcn/ui. Log d
 - **PDF import** - Upload a bank statement and Gemini extracts transactions, parses amounts, and categorizes them
 - **CSV export** - Export expense data for analysis or migration
 - **Dark mode** - Light and dark themes
-- **Password protected** - Simple password protection for your data
+- **Supabase-backed** - Use your configured Supabase project for live data
 - **Responsive** - Works on desktop, tablet, and mobile
 - **Debt repayment**: Credit cards, personal loans, or money owed
 - **Savings goals**: Emergency fund, vacation savings, house down payment
@@ -36,22 +36,13 @@ Before you begin, ensure you have the following installed:
   # Should output: v18.x.x or higher
   ```
 
-#### 2. **pnpm** (Package Manager)
+#### 2. **npm** (Package Manager)
 
-Install pnpm globally:
-
-```bash
-npm install -g pnpm
-```
-
-Verify installation:
+npm ships with Node.js. Verify installation:
 
 ```bash
-pnpm --version
-# Should output: 8.x.x or higher
+npm --version
 ```
-
-> **Note:** You can also use `npm` or `yarn` instead of `pnpm`. Just replace `pnpm` with your preferred package manager in all commands.
 
 ---
 
@@ -67,7 +58,7 @@ cd daily-expenses-tracker
 ### Step 2: Install Dependencies
 
 ```bash
-pnpm install
+npm install
 ```
 
 ### Step 3: Set Up Supabase
@@ -163,12 +154,9 @@ create table if not exists public."trackerEntries" (
 Create a `.env.local` file in the root directory:
 
 ```bash
-# App Password Protection
-APP_PASSWORD=your_secure_password_here
-
 # Supabase Configuration
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJxxxxxxxxxxx...
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 
 # Google Gemini Configuration (Optional - for in-app PDF import)
 GOOGLE_GEMINI_API_KEY=your_gemini_api_key_here
@@ -177,17 +165,16 @@ GOOGLE_GEMINI_API_KEY=your_gemini_api_key_here
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
 ```
 
-Note: You may use the app without either Supabase keys or Gemini Keys.
+Supabase URL and publishable key are required for live data access. Gemini
+configuration remains optional.
 
-- Demo data will be used if you dont add Supabase keys
 - Only AI PDF will not work if Gemini key is not added.
 - The CLI PDF parsing script (`npm run parse-pdf`) needs either Claude Code CLI or `ANTHROPIC_API_KEY`.
 
 **Replace:**
 
-- `your_secure_password_here` → Your chosen password for the app. You only need this if you are hosting this to Vercel and want some security.
 - `https://xxxxx.supabase.co` → Your Supabase Project URL
-- `eyJxxxxxxxxxxx...` → Your Supabase anon public key
+- `your_supabase_publishable_key` → Your Supabase publishable key
 - `your_gemini_api_key_here` → Your Google Gemini API key for AI PDF processing
 
 > **Important:** Never commit `.env.local` to GitHub!
@@ -195,12 +182,12 @@ Note: You may use the app without either Supabase keys or Gemini Keys.
 ### Step 5: Run the Development Server
 
 ```bash
-pnpm dev
+npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-You should see the login page. Enter your `APP_PASSWORD` to access the app!
+Open [http://localhost:3001](http://localhost:3001) in your browser. The
+dashboard opens directly at `/`; configure Supabase to use live data, or leave
+it unavailable to use the existing demo data mode.
 
 ---
 
@@ -309,7 +296,6 @@ git push -u origin main
 1. Go to your project in Vercel
 2. Navigate to **Settings** → **Environment Variables**
 3. Add the following:
-   - `APP_PASSWORD` → Your secure password
    - `NEXT_PUBLIC_SUPABASE_URL` → Your Supabase URL
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` → Your Supabase anon key
    - `GOOGLE_GEMINI_API_KEY` → Your Gemini api key
@@ -329,14 +315,14 @@ Your app will be live at: `https://your-project-name.vercel.app`
 ### For Local Development:
 
 - Keep `.env.local` private (never commit it)
-- Use a strong `APP_PASSWORD`
+- Use a strong password for each Supabase user
 - Keep your database password secure
 
 ### For Production:
 
-1. **Use a strong APP_PASSWORD** (at least 12 characters)
+1. **Use strong Supabase passwords** (at least 12 characters)
 2. **Enable HTTPS** (Vercel does this automatically)
-3. **Don't share your password publicly**
+3. **Don't share credentials publicly**
 4. **Regularly backup your Supabase database**
    - Go to Supabase → Database → Backups
 
@@ -474,7 +460,7 @@ daily-expenses-tracker/
 │   │   ├── expenses/          # Expenses table page
 │   │   ├── yearly-charts/     # Analytics page
 │   │   ├── trackers/          # Track debts, savings, loans etc table page
-│   │   └── login/             # Login page
+│   │   └── (protected)/page.tsx # Main dashboard page at /
 │   ├── components/            # React components
 │   │   ├── ui/               # shadcn/ui components
 │   │   ├── yearly-charts/           # Chart components
@@ -483,7 +469,6 @@ daily-expenses-tracker/
 │   ├── entities/             # Data models & types
 │   ├── hooks/                # Custom React hooks
 │   ├── lib/                  # Config, Utilities & Supabase client
-│   └── middleware.ts         # Password protection middleware
 ├── .env.local                # Environment variables (not in git)
 ├── package.json
 └── README.md
@@ -493,14 +478,14 @@ daily-expenses-tracker/
 
 ```bash
 # Development
-pnpm dev          # Start dev server (localhost:3000)
+npm run dev      # Start dev server (localhost:3001)
 
 # Build
-pnpm build        # Build for production
-pnpm start        # Start production server
+npm run build    # Build for production
+npm start        # Start production server
 
 # Linting
-pnpm lint         # Run ESLint
+npm run lint     # Run ESLint
 
 # PDF Parsing (requires Claude Code CLI)
 npm run parse-pdf -- ./statement.pdf
@@ -512,7 +497,7 @@ Want to extend the app? Here are some ideas:
 
 - Budget limits per category
 - Email reports
-- Multi-user support with proper auth
+- Password reset and account-management flows
 - More chart types
 - Export to CSV/Excel Done
 - Spending alerts

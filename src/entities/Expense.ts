@@ -1,6 +1,8 @@
 // Core expense type
 export type Expense = {
   id: string;
+  /** UUID of the authenticated owner — matches auth.users.id in Supabase. */
+  userId?: string;
   amount: number;
   memberId: string | null;
   categoryId: string | null; // References Category.id
@@ -30,6 +32,8 @@ export type Tag = {
 // Member type
 export type Member = {
   id: string;
+  /** UUID of the authenticated owner — only present for DB-backed members. */
+  userId?: string;
   fullName: string;
   name: string;
   createdAt: Date;
@@ -55,3 +59,10 @@ export type ExpenseWithDetails = Expense & {
   tagName: string | null;
   memberName: string | null;
 };
+
+// ---------------------------------------------------------------------------
+// Validation result — used by validateExpenseInput and related helpers
+// ---------------------------------------------------------------------------
+export type ValidationResult =
+  | { valid: true }
+  | { valid: false; errors: string[] };

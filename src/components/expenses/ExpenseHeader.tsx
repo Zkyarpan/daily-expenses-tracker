@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 import { ExpenseWithDetails } from "@/entities/Expense";
@@ -12,8 +13,14 @@ import { Card, CardContent } from "../ui/card";
 import { NumberTicker } from "../ui/number-ticker";
 
 import CategoryCard from "./CategoryCard";
-import MemberCard from "./MemberCard";
 import MonthYearSelector from "./MonthYearSelector";
+
+// Lazy-load MemberCard: it imports recharts (PieChart) which adds ~800 modules.
+// With dynamic(), recharts is only fetched when the charts panel is visible.
+const MemberCard = dynamic(() => import("./MemberCard"), {
+  loading: () => <div className="bg-muted h-28 animate-pulse rounded-lg" />,
+  ssr: false,
+});
 
 interface ExpenseHeaderProps {
   data: ExpenseWithDetails[];

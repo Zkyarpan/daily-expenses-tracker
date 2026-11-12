@@ -8,11 +8,11 @@ High-level map of how the app is structured. Useful context before touching unfa
 
 | Route | File | Description |
 |-------|------|-------------|
+| `/` | `app/(protected)/page.tsx` | Public financial dashboard with yearly overview and recent activity |
 | `/expenses` | `app/expenses/page.tsx` | Monthly expense table with inline editing, bulk ops, and summary header |
 | `/yearly-charts` | `app/yearly-charts/page.tsx` | Annual analytics with 9 tabbed charts and export (PDF/Excel) |
 | `/import-expenses` | `app/import-expenses/page.tsx` | 3-step CSV/PDF import wizard |
 | `/trackers` | `app/trackers/page.tsx` | Misc tracker cards (debts, savings, loans) |
-| `/login` | `app/login/page.tsx` | Password-protected auth |
 
 ---
 
@@ -20,13 +20,17 @@ High-level map of how the app is structured. Useful context before touching unfa
 
 ```
 Supabase (PostgreSQL)
-  └── src/lib/supabase.ts          # Client init + demo mode flag
+  └── src/utils/supabase/          # Browser client and configuration
+        └── src/lib/supabase.ts    # Shared browser client + data-mode helpers
         └── src/hooks/             # React Query hooks (queries + mutations)
               └── Page components  # Consume hooks, manage local state
                     └── Feature components  # Receive data as props
 ```
 
-**Demo mode**: when `NEXT_PUBLIC_SUPABASE_URL` is not set, `getIsDemoMode()` returns true and hooks return hardcoded sample data. No Supabase calls are made.
+**Demo data**: the existing hooks still return hardcoded sample data when the
+Supabase data client is unavailable. Application routes are public; live data
+requires the configured Supabase policies to allow the browser client to read
+and write the relevant tables.
 
 ---
 
@@ -68,7 +72,7 @@ Supabase (PostgreSQL)
 
 ### Layout
 - `AppSideBar` — collapsible sidebar with icon-only mode
-- `Navbar` — sticky top bar; hosts `CommandPalette`, theme toggle, user menu
+- `Navbar` — sticky top bar; hosts `CommandPalette` and theme toggle
 - `CommandPalette` — ⌘K global navigation dialog
 
 ---

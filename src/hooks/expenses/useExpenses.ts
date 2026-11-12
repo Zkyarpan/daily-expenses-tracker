@@ -6,7 +6,7 @@ import { parseLocalDate } from "@/lib/dateUtils";
 import { supabase } from "@/lib/supabase";
 import { transformToExpenseWithDetails } from "@/lib/utils";
 
-// Demo data fetcher
+// Demo data fetcher (used when Supabase is NOT configured)
 const fetchDemoExpenses = async (
   year: number,
   month: number,
@@ -24,16 +24,13 @@ const fetchDemoExpenses = async (
   return transformToExpenseWithDetails(filteredExpenses);
 };
 
-// Real API fetcher
+// Real Supabase fetcher — RLS SELECT policy ensures only the authenticated
+// user's expenses are returned; no explicit user_id filter is needed.
 const fetchApiExpenses = async (
   year: number,
   month: number,
 ): Promise<ExpenseWithDetails[]> => {
-  // Check if supabase is available
-  if (!supabase) {
-    console.warn("Supabase not available, returning empty expenses");
-    return [];
-  }
+  if (!supabase) return [];
 
   const startDate = `${year}-${String(month + 1).padStart(2, "0")}-01`;
   const endMonth = month + 1 >= 12 ? 1 : month + 2;
@@ -49,8 +46,7 @@ const fetchApiExpenses = async (
 
   if (error) throw error;
 
-  const expenses = data || [];
-  return transformToExpenseWithDetails(expenses);
+  return transformToExpenseWithDetails(data ?? []);
 };
 
 export const useExpenses = (year: number, month: number) => {
@@ -60,6 +56,16 @@ export const useExpenses = (year: number, month: number) => {
     queryFn: () =>
       isDemo ? fetchDemoExpenses(year, month) : fetchApiExpenses(year, month),
     queryKey: ["expenses", year, month],
-    staleTime: isDemo ? Infinity : 5 * 60 * 1000, // Demo data never stale
+    // Demo data never goes stale; live data re-fetches after 5 min
+    staleTime: isDemo ? Infinity : 5 * 60 * 1000,
+    // Retry once on network errors; fail fast on auth errors
+    retry: (failureCount, error) => {
+      if (error && typeof error === "object" && "code" in error) {
+        const code = (error as { code: string }).code;
+        // 42501 = insufficient_privilege (RLS blocked) — don't retry
+        if (code === "42501" || code === "PGRST301") return false;
+      }
+      return failureCount < 1;
+    },
   });
 };

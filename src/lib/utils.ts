@@ -10,6 +10,7 @@ import {
   DEFAULT_TAGS,
   LOCALE_CONFIG,
 } from "./config";
+import { parseLocalDate } from "./dateUtils";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -19,7 +20,14 @@ export const stripExpenseDetails = (expense: ExpenseWithDetails): Expense => ({
   amount: expense.amount,
   categoryId: expense.categoryId,
   createdAt: expense.createdAt,
-  date: expense.date,
+  // Normalise date to ISO string (YYYY-MM-DD) for DB compatibility.
+  // expense.date may be a Date object (from transformToExpenseWithDetails) or
+  // a string already.
+  // The DB `date` column takes the string form, so the value is deliberately
+  // a string here; the cast only reconciles it with Expense.date's type.
+  date: (expense.date instanceof Date
+    ? expense.date.toISOString().split("T")[0]
+    : String(expense.date).split("T")[0]) as unknown as Date,
   description: expense.description,
   id: expense.id,
   memberId: expense.memberId,
@@ -27,9 +35,11 @@ export const stripExpenseDetails = (expense: ExpenseWithDetails): Expense => ({
   updatedAt: expense.updatedAt,
 });
 
-// Helper function to transform expenses to ExpenseWithDetails
+// Helper function to transform raw DB rows (or demo data) to ExpenseWithDetails.
+// Normalises date strings → local Date objects, ISO timestamps → Date objects.
 export const transformToExpenseWithDetails = (
-  expenses: Expense[],
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  expenses: any[],
 ): ExpenseWithDetails[] => {
   return expenses.map((expense) => {
     const category = DEFAULT_CATEGORIES.find(
@@ -39,6 +49,11 @@ export const transformToExpenseWithDetails = (
     const member = DEFAULT_MEMBERS.find((m) => m.id === expense.memberId);
     return {
       ...expense,
+      // Normalise date: Supabase returns "YYYY-MM-DD" string; parse as local time.
+      date: expense.date ? parseLocalDate(expense.date) : new Date(),
+      // Normalise timestamps
+      createdAt: expense.createdAt ? new Date(expense.createdAt) : new Date(),
+      updatedAt: expense.updatedAt ? new Date(expense.updatedAt) : new Date(),
       categoryName: category?.name || null,
       memberName: member?.fullName || null,
       tagName: tag?.name || null,
@@ -74,3 +89,16 @@ export const formatCurrencyCompact = (amount: number) => {
     style: LOCALE_CONFIG.style,
   }).format(amount);
 };
+
+/**
+ * Extracts a human-readable message from any thrown value.
+ * Handles both standard `Error` instances and Supabase `PostgrestError`
+ * objects (which have a `.message` property but are not `instanceof Error`).
+ */
+export function getErrorMessage(err: unknown, fallback = "Unknown error"): string {
+  if (err && typeof err === "object" && "message" in err) {
+    const msg = (err as { message: unknown }).message;
+    if (typeof msg === "string" && msg.trim().length > 0) return msg;
+  }
+  return fallback;
+}

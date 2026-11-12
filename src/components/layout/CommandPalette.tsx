@@ -5,6 +5,8 @@ import {
   BarChart2,
   CreditCard,
   LayoutDashboard,
+  LineChart,
+  ReceiptText,
   Upload,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -19,10 +21,12 @@ import {
 } from "@/components/ui/command";
 
 const NAV_ITEMS = [
-  { href: "/expenses", icon: LayoutDashboard, label: "Expenses" },
+  { href: "/", icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/expenses", icon: ReceiptText, label: "Expenses" },
+  { href: "/analytics", icon: LineChart, label: "Analytics & Reports" },
   { href: "/yearly-charts", icon: BarChart2, label: "Yearly Charts" },
   { href: "/import-expenses", icon: Upload, label: "Import Expenses" },
-  { href: "/trackers", icon: CreditCard, label: "Trackers" },
+  { href: "/trackers", icon: CreditCard, label: "Misc Trackers" },
 ];
 
 export function CommandPalette() {

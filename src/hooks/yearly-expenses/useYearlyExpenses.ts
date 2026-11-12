@@ -4,6 +4,7 @@ import { expensesData } from "@/components/expenses/data/expenseData";
 import { ExpenseWithDetails } from "@/entities/Expense";
 import { parseLocalDate } from "@/lib/dateUtils";
 import { getIsDemoMode, supabase } from "@/lib/supabase";
+import { fetchExpensesBetween } from "@/lib/supabase/expenses";
 import { transformToExpenseWithDetails } from "@/lib/utils";
 
 const isDemoMode = getIsDemoMode();
@@ -23,7 +24,8 @@ const fetchDemoYearlyExpenses = async (
   return transformToExpenseWithDetails(filteredExpenses);
 };
 
-// Real API fetcher for full year
+// Real API fetcher for full year — paginated and scoped to the signed-in
+// user (see fetchExpensesBetween), so large years are never truncated.
 const fetchApiYearlyExpenses = async (
   year: number,
 ): Promise<ExpenseWithDetails[]> => {
@@ -33,27 +35,22 @@ const fetchApiYearlyExpenses = async (
     return [];
   }
 
-  const startDate = `${year}-01-01`;
-  const endDate = `${year}-12-31`;
-
-  const { data, error } = await supabase
-    .from("expenses")
-    .select("*")
-    .gte("date", startDate)
-    .lte("date", endDate)
-    .order("date", { ascending: false });
-
-  if (error) throw error;
-
-  const expenses = data || [];
-  return transformToExpenseWithDetails(expenses);
+  const rows = await fetchExpensesBetween(`${year}-01-01`, `${year}-12-31`);
+  return transformToExpenseWithDetails(rows);
 };
 
+/**
+ * Shared query options for one calendar year of expenses. Used by
+ * useYearlyExpenses and by the analytics page (via useQueries), so the
+ * Dashboard, Yearly Charts and Analytics all share one cache entry per year.
+ */
+export const yearlyExpensesQueryOptions = (year: number) => ({
+  queryFn: () =>
+    isDemoMode ? fetchDemoYearlyExpenses(year) : fetchApiYearlyExpenses(year),
+  queryKey: ["yearly-expenses", year] as const,
+  staleTime: isDemoMode ? Infinity : 5 * 60 * 1000, // Demo data never stale, API data stale after 5 minutes
+});
+
 export const useYearlyExpenses = (year: number) => {
-  return useQuery({
-    queryFn: () =>
-      isDemoMode ? fetchDemoYearlyExpenses(year) : fetchApiYearlyExpenses(year),
-    queryKey: ["yearly-expenses", year],
-    staleTime: isDemoMode ? Infinity : 5 * 60 * 1000, // Demo data never stale, API data stale after 5 minutes
-  });
+  return useQuery(yearlyExpensesQueryOptions(year));
 };
