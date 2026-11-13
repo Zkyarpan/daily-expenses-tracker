@@ -1,16 +1,17 @@
 "use client";
 
 import {
-  BarChart3,
-  LayoutDashboard,
-  LineChart,
-  ListChecks,
+  ChartBar,
+  ChartLine,
+  Checks,
+  CircleNotch,
+  House,
   PiggyBank,
-  ReceiptText,
-  Upload,
+  Receipt,
+  UploadSimple,
   Wallet,
-} from "lucide-react";
-import Link from "next/link";
+} from "@phosphor-icons/react";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 
 import { SidebarUserMenu } from "@/components/auth/SidebarUserMenu";
@@ -21,7 +22,6 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -30,14 +30,14 @@ import {
   useSidebar,
 } from "../ui/sidebar";
 
-const primaryItems = [
+const navItems = [
   {
-    icon: LayoutDashboard,
-    title: "Dashboard",
+    icon: House,
+    title: "Home",
     url: "/",
   },
   {
-    icon: ReceiptText,
+    icon: Receipt,
     title: "Expenses",
     url: "/expenses",
   },
@@ -47,27 +47,65 @@ const primaryItems = [
     url: "/budgets",
   },
   {
-    icon: LineChart,
+    icon: ChartLine,
     title: "Analytics",
     url: "/analytics",
   },
   {
-    icon: BarChart3,
-    title: "Yearly charts",
+    icon: ChartBar,
+    title: "Yearly Charts",
     url: "/yearly-charts",
   },
   {
-    icon: Upload,
-    title: "Import Expenses",
+    icon: UploadSimple,
+    title: "Import",
     url: "/import-expenses",
+  },
+  {
+    icon: Checks,
+    title: "Trackers",
+    url: "/trackers",
   },
 ];
 
 interface AppSideBarProps {
   userEmail?: string;
+  userName?: string;
 }
 
-const AppSideBar = ({ userEmail }: AppSideBarProps) => {
+/** "jane.doe@x.com" → "Jane Doe" when the account has no saved name. */
+const nameFromEmail = (email: string) =>
+  email
+    .split("@")[0]
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+const initialsOf = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+
+/** Spinner on the nav item whose page is loading (must render inside <Link>). */
+function NavPending() {
+  const { pending } = useLinkStatus();
+  if (!pending) return null;
+  return (
+    <CircleNotch
+      size={14}
+      weight="bold"
+      aria-hidden
+      className="ml-auto shrink-0 animate-spin opacity-70 group-data-[collapsible=icon]:hidden"
+    />
+  );
+}
+
+const AppSideBar = ({ userEmail, userName }: AppSideBarProps) => {
+  const displayName = userName || (userEmail ? nameFromEmail(userEmail) : "");
   const pathname = usePathname();
   const { isMobile, setOpenMobile } = useSidebar();
 
@@ -80,7 +118,8 @@ const AppSideBar = ({ userEmail }: AppSideBarProps) => {
 
   return (
     <Sidebar collapsible="icon" variant="sidebar">
-      <SidebarHeader className="px-3 py-4">
+      {/* Brand header */}
+      <SidebarHeader className="px-4 py-5">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
@@ -88,75 +127,92 @@ const AppSideBar = ({ userEmail }: AppSideBarProps) => {
               onClick={closeOnMobile}
               size="lg"
               tooltip="Daily Expenses"
+              className="h-11 gap-3 rounded-2xl px-2 hover:bg-sidebar-accent"
             >
               <Link href="/">
-                <span className="bg-primary text-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-lg">
-                  <Wallet className="size-4" />
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-sidebar-foreground/10 shadow-sm">
+                  <Wallet size={18} weight="duotone" className="text-sidebar-foreground" />
                 </span>
-                <span className="font-semibold tracking-tight">Daily Expenses</span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold tracking-tight text-sidebar-foreground">
+                    Daily Expenses
+                  </p>
+                  <p className="truncate text-[10px] font-medium text-sidebar-foreground/40">
+                    Finance tracker
+                  </p>
+                </div>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarSeparator />
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {primaryItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isRouteActive(item.url)}
-                    onClick={closeOnMobile}
-                    tooltip={item.title}
-                  >
-                    <Link href={item.url} aria-current={isRouteActive(item.url) ? "page" : undefined}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Tools</SidebarGroupLabel>
-
+      <SidebarContent className="px-3 py-2">
+        <SidebarGroup className="p-0">
           <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={isRouteActive("/trackers")}
-                  onClick={closeOnMobile}
-                  tooltip="Misc trackers"
-                >
-                  <Link
-                    href="/trackers"
-                    aria-current={isRouteActive("/trackers") ? "page" : undefined}
-                  >
-                    <ListChecks /> <span>Misc trackers</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+            <SidebarMenu className="gap-1">
+              {navItems.map((item) => {
+                const active = isRouteActive(item.url);
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={active}
+                      onClick={closeOnMobile}
+                      tooltip={item.title}
+                      className={
+                        active
+                          ? "h-10 gap-3 rounded-xl px-3 text-sm font-semibold bg-sidebar-foreground text-sidebar hover:bg-sidebar-foreground/90"
+                          : "h-10 gap-3 rounded-xl px-3 text-sm font-medium text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all"
+                      }
+                    >
+                      <Link
+                        href={item.url}
+                        aria-current={active ? "page" : undefined}
+                      >
+                        <item.icon
+                          size={17}
+                          weight={active ? "fill" : "regular"}
+                          className="shrink-0"
+                        />
+                        <span>{item.title}</span>
+                        <NavPending />
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="px-3 pb-4">
-        <SidebarSeparator className="mb-2" />
-        <SidebarMenu>
-          {userEmail && <SidebarUserMenu />}
-        </SidebarMenu>
-        <div className="text-sidebar-foreground/50 mt-2 px-2 text-xs leading-5 group-data-[collapsible=icon]:hidden">
-          {userEmail ?? "Personal finance workspace"}
-        </div>
-      </SidebarFooter>
+
+      {/* Account: who is signed in, and a clear way to sign out */}
+      {userEmail && (
+        <SidebarFooter className="gap-2 px-3 pb-4">
+          <SidebarSeparator className="mx-0 mb-1 bg-sidebar-border" />
+          <div
+            className="flex items-center gap-3 rounded-xl px-2 py-1.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+            title={`${displayName} · ${userEmail}`}
+          >
+            <span
+              aria-hidden
+              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sidebar-foreground/10 text-xs font-semibold text-sidebar-foreground"
+            >
+              {initialsOf(displayName) || "?"}
+            </span>
+            <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+              <p className="truncate text-sm font-semibold text-sidebar-foreground">
+                {displayName}
+              </p>
+              <p className="truncate text-xs text-sidebar-foreground/60">{userEmail}</p>
+            </div>
+          </div>
+          <SidebarMenu>
+            <SidebarUserMenu />
+          </SidebarMenu>
+        </SidebarFooter>
+      )}
     </Sidebar>
   );
 };

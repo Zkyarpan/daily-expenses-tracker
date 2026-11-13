@@ -1,22 +1,26 @@
 /**
  * src/components/providers/AlertsShell.tsx
  *
- * Client component that:
- *  1. Reads the current authenticated user on the client side.
- *  2. Wraps children in AlertsProvider so alerts state is shared across all
- *     protected pages.
+ * Client boundary that wraps the protected pages in AlertsProvider so alert
+ * state is shared across them.
  *
- * This is a client component so it can call useCurrentUser() and pass the
- * userId to AlertsProvider.  The protected layout is a server component and
- * cannot use hooks directly.
+ * The user id is passed in from the protected layout, which has already
+ * verified the session on the server (`supabase.auth.getUser()`). Previously
+ * this component called getUser() again in the browser on every page load,
+ * which added a network round-trip to Supabase Auth before alerts could load.
+ * `userId` is undefined in demo mode (no Supabase configured).
  */
 
 "use client";
 
 import { AlertsProvider } from "@/components/providers/context/AlertsContext";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
 
-export function AlertsShell({ children }: { children: React.ReactNode }) {
-  const user = useCurrentUser();
-  return <AlertsProvider userId={user?.id}>{children}</AlertsProvider>;
+export function AlertsShell({
+  children,
+  userId,
+}: {
+  children: React.ReactNode;
+  userId?: string;
+}) {
+  return <AlertsProvider userId={userId}>{children}</AlertsProvider>;
 }

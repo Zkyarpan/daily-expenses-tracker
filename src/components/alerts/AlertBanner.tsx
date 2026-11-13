@@ -19,10 +19,10 @@
 import { AlertTriangle, Bell, X } from "lucide-react";
 import Link from "next/link";
 
-import type { SpendingAlert } from "@/entities/Alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getAlertTitle, getAlertDescription } from "@/lib/alertCalculation";
+import type { SpendingAlert } from "@/entities/Alert";
+import { getAlertDescription,getAlertTitle } from "@/lib/alertCalculation";
 import { formatCurrency } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -63,11 +63,11 @@ export function AlertBanner({ alerts, onDismiss, showBudgetsLink = false }: Aler
 
   const containerClass = isDestructive
     ? "border-destructive/40 bg-destructive/10 text-destructive"
-    : "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200";
+    : "border-warning/30 bg-warning/10 text-warning";
 
   return (
     <div
-      className={`rounded-lg border px-4 py-3 ${containerClass}`}
+      className={`rounded-2xl border px-4 py-3.5 ${containerClass}`}
       role="alert"
       aria-live="polite"
     >
@@ -96,7 +96,7 @@ export function AlertBanner({ alerts, onDismiss, showBudgetsLink = false }: Aler
         <Badge
           variant={isDestructive ? "destructive" : "secondary"}
           className={`shrink-0 text-xs ${
-            !isDestructive ? "bg-amber-200 text-amber-900 dark:bg-amber-900 dark:text-amber-100" : ""
+            !isDestructive ? "border-warning/30 bg-warning/15 text-warning" : ""
           }`}
         >
           {activeAlerts.length} alert{activeAlerts.length !== 1 ? "s" : ""}
