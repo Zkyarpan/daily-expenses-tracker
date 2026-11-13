@@ -16,13 +16,15 @@ import {
   getCategoryColor,
 } from "@/lib/utils";
 
+import { ChartHeader } from "./ChartHeader";
+
 interface CategoryAverageChartProps {
   expenses: ExpenseWithDetails[];
 }
 
 const chartConfig = {
   average: {
-    color: "hsl(var(--chart-3))",
+    color: "var(--chart-3)",
     label: "Average per Transaction",
   },
 } satisfies ChartConfig;
@@ -51,8 +53,8 @@ const CategoryAverageChart = ({ expenses }: CategoryAverageChartProps) => {
 
   return (
     <div>
-      <h2 className="mb-6 text-lg font-medium">Average Spending by Category</h2>
-      <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
+      <ChartHeader title="Average per expense" description="Mean amount of a single expense in each category" />
+      <ChartContainer config={chartConfig} className="aspect-auto h-[300px] w-full">
         <BarChart
           accessibilityLayer
           data={categoryData}

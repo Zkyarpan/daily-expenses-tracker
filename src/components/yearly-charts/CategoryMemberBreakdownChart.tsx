@@ -15,6 +15,8 @@ import { ExpenseWithDetails } from "@/entities/Expense";
 import { MEMBER_CHART_COLORS } from "@/lib/config";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils";
 
+import { ChartEmpty, ChartHeader } from "./ChartHeader";
+
 interface CategoryMemberBreakdownChartProps {
   expenses: ExpenseWithDetails[];
 }
@@ -78,20 +80,16 @@ const CategoryMemberBreakdownChart = ({
   if (chartData.length === 0) {
     return (
       <div>
-        <h2 className="mb-6 text-lg font-medium">
-          Category Spending by Member
-        </h2>
-        <div className="flex h-[300px] flex-col items-center justify-center">
-          <p className="text-muted-foreground">No data available</p>
-        </div>
+        <ChartHeader title="Categories by member" />
+        <ChartEmpty />
       </div>
     );
   }
 
   return (
     <div>
-      <h2 className="mb-6 text-lg font-medium">Category Spending by Member</h2>
-      <ChartContainer config={chartConfig} className="min-h-[400px] w-full">
+      <ChartHeader title="Categories by member" description="How each person's spending splits across categories" />
+      <ChartContainer config={chartConfig} className="aspect-auto h-[360px] w-full">
         <BarChart accessibilityLayer data={chartData} layout="vertical">
           <CartesianGrid horizontal={false} />
           <XAxis

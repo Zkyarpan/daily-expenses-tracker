@@ -16,13 +16,15 @@ import {
   getCategoryColor,
 } from "@/lib/utils";
 
+import { ChartHeader } from "./ChartHeader";
+
 interface CategoryTotalChartProps {
   expenses: ExpenseWithDetails[];
 }
 
 const chartConfig = {
   amount: {
-    color: "hsl(var(--chart-2))",
+    color: "var(--chart-2)",
     label: "Total Spending",
   },
 } satisfies ChartConfig;
@@ -43,8 +45,8 @@ const CategoryTotalChart = ({ expenses }: CategoryTotalChartProps) => {
 
   return (
     <div>
-      <h2 className="mb-6 text-lg font-medium">Total Spending by Category</h2>
-      <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
+      <ChartHeader title="Spending by category" description="Total spent in each category" />
+      <ChartContainer config={chartConfig} className="aspect-auto h-[300px] w-full">
         <BarChart
           accessibilityLayer
           data={categoryData}

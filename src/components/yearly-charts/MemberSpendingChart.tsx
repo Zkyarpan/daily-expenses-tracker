@@ -14,6 +14,8 @@ import { ExpenseWithDetails } from "@/entities/Expense";
 import { MEMBER_CHART_COLORS } from "@/lib/config";
 import { formatCurrency } from "@/lib/utils";
 
+import { ChartEmpty, ChartHeader } from "./ChartHeader";
+
 interface MemberSpendingChartProps {
   expenses: ExpenseWithDetails[];
 }
@@ -87,21 +89,17 @@ const MemberSpendingChart = ({ expenses }: MemberSpendingChartProps) => {
   if (memberData.length === 0) {
     return (
       <div>
-        <h2 className="mb-6 text-lg font-medium">Spending by Member</h2>
-        <div className="flex h-[300px] flex-col items-center justify-center">
-          <p className="text-muted-foreground">
-            No member spending data available
-          </p>
-        </div>
+        <ChartHeader title="Spending by member" />
+        <ChartEmpty />
       </div>
     );
   }
 
   return (
     <div>
-      <h2 className="mb-6 text-lg font-medium">Spending by Member</h2>
+      <ChartHeader title="Spending by member" description="Share of spending paid by each person" />
 
-      <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
+      <ChartContainer config={chartConfig} className="aspect-auto h-[300px] w-full">
         <PieChart>
           <ChartTooltip
             content={

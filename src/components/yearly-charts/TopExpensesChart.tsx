@@ -22,6 +22,8 @@ import { parseLocalDate } from "@/lib/dateUtils";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils";
 import { getCategoryColor } from "@/lib/utils";
 
+import { ChartEmpty, ChartHeader } from "./ChartHeader";
+
 interface TopExpensesChartProps {
   expenses: ExpenseWithDetails[];
   limit?: number;
@@ -29,7 +31,7 @@ interface TopExpensesChartProps {
 
 const chartConfig = {
   amount: {
-    color: "hsl(var(--chart-2))",
+    color: "var(--chart-2)",
     label: "Amount",
   },
 } satisfies ChartConfig;
@@ -89,20 +91,19 @@ const TopExpensesChart = ({ expenses, limit = 10 }: TopExpensesChartProps) => {
   if (topExpenses.length === 0) {
     return (
       <div>
-        <h2 className="mb-6 text-lg font-medium">Top {limit} Expenses</h2>
-        <div className="flex h-[300px] flex-col items-center justify-center">
-          <p className="text-muted-foreground">No expenses available</p>
-        </div>
+        <ChartHeader title={`Top ${limit} expenses`} />
+        <ChartEmpty />
       </div>
     );
   }
 
   return (
     <div>
-      <h2 className="mb-6 text-lg font-medium">
-        Top {topExpenses.length} Individual Expenses
-      </h2>
-      <ChartContainer config={chartConfig} className="min-h-[400px] w-full">
+      <ChartHeader
+        title={`Top ${topExpenses.length} expenses`}
+        description="Largest single expenses, coloured by category"
+      />
+      <ChartContainer config={chartConfig} className="aspect-auto h-[360px] w-full">
         <BarChart accessibilityLayer data={topExpenses} layout="vertical">
           <CartesianGrid horizontal={false} />
           <XAxis

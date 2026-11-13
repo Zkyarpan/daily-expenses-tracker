@@ -18,7 +18,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical } from "lucide-react";
+import { GripVertical, RotateCcw } from "lucide-react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CategoryAverageChart from "@/components/yearly-charts/CategoryAverageChart";
@@ -31,6 +31,9 @@ import MemberSpendingChart from "@/components/yearly-charts/MemberSpendingChart"
 import MonthlySpendingChart from "@/components/yearly-charts/MonthlySpendingChart";
 import TopExpensesChart from "@/components/yearly-charts/TopExpensesChart";
 import { ExpenseWithDetails } from "@/entities/Expense";
+import { cn } from "@/lib/utils";
+
+const CARD_CLASS = "chart-card bg-card text-card-foreground min-w-0 rounded-2xl p-5 shadow-md sm:p-6";
 
 // Sortable chart wrapper component
 const SortableChart = ({
@@ -60,20 +63,23 @@ const SortableChart = ({
     <div
       ref={setNodeRef}
       style={style}
-      className={`chart-card bg-primary-foreground rounded-lg px-6 pb-6 pt-4 ${colSpan} ${
-        isDragging ? "z-50 opacity-50" : "opacity-100"
-      } border-2 border-transparent transition-all duration-200`}
+      className={cn(
+        CARD_CLASS,
+        "group/chart relative",
+        colSpan,
+        isDragging && "ring-ring/40 z-50 opacity-80 ring-2",
+      )}
       {...attributes}
     >
-      <div className="flex items-start gap-2">
-        <div
-          {...listeners}
-          className="text-muted-foreground/30 hover:text-muted-foreground mt-1.5 shrink-0 cursor-grab transition-colors active:cursor-grabbing"
-        >
-          <GripVertical className="h-4 w-4" />
-        </div>
-        <div className="min-w-0 flex-1">{children}</div>
-      </div>
+      <button
+        type="button"
+        aria-label="Drag to reorder chart"
+        {...listeners}
+        className="text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted absolute top-3 right-3 flex size-7 cursor-grab items-center justify-center rounded-md transition-colors active:cursor-grabbing print:hidden"
+      >
+        <GripVertical className="size-4" />
+      </button>
+      <div className="pr-8">{children}</div>
     </div>
   );
 };
@@ -99,6 +105,8 @@ const YearlyChartsGrid = ({
     "member-heatmap",
     "category-by-month",
   ];
+
+  const [tab, setTab] = useState("trends");
 
   // Chart order state with lazy initialization from localStorage
   const [chartOrder, setChartOrder] = useState<string[]>(() => {
@@ -153,21 +161,21 @@ const YearlyChartsGrid = ({
     { component: React.ReactNode; colSpan: string }
   > = {
     "category-average": {
-      colSpan: "lg:col-span-2",
+      colSpan: "",
       component: <CategoryAverageChart expenses={filteredExpenses} />,
     },
     "category-by-month": {
-      colSpan: "lg:col-span-3 xl:col-span-3",
+      colSpan: "lg:col-span-2",
       component: (
         <CategoryByMonthChart expenses={filteredExpenses} year={currentYear} />
       ),
     },
     "category-member-breakdown": {
-      colSpan: "lg:col-span-2 xl:col-span-2",
+      colSpan: "",
       component: <CategoryMemberBreakdownChart expenses={filteredExpenses} />,
     },
     "category-total": {
-      colSpan: "lg:col-span-2 xl:col-span-2",
+      colSpan: "",
       component: <CategoryTotalChart expenses={filteredExpenses} />,
     },
     "location-spending": {
@@ -175,21 +183,21 @@ const YearlyChartsGrid = ({
       component: <LocationSpendingChart expenses={filteredExpenses} />,
     },
     "member-heatmap": {
-      colSpan: "lg:col-span-3 xl:col-span-4 2xl:col-span-5",
+      colSpan: "lg:col-span-2",
       component: <MemberCategoryHeatmap expenses={filteredExpenses} />,
     },
     "member-spending": {
-      colSpan: "lg:col-span-2",
+      colSpan: "",
       component: <MemberSpendingChart expenses={filteredExpenses} />,
     },
     "monthly-spending": {
-      colSpan: "lg:col-span-2 xl:col-span-2",
+      colSpan: "lg:col-span-2",
       component: (
         <MonthlySpendingChart expenses={filteredExpenses} year={currentYear} />
       ),
     },
     "top-expenses": {
-      colSpan: "lg:col-span-2 xl:col-span-2",
+      colSpan: "lg:col-span-2",
       component: <TopExpensesChart expenses={filteredExpenses} limit={10} />,
     },
   };
@@ -204,7 +212,7 @@ const YearlyChartsGrid = ({
 
   const renderChartGroup = (ids: string[], draggable = false) => {
     const grid = (
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {ids.map((chartId) => {
           const config = chartConfigs[chartId];
           if (!config) return null;
@@ -216,10 +224,7 @@ const YearlyChartsGrid = ({
             );
           }
           return (
-            <div
-              key={chartId}
-              className={`chart-card bg-primary-foreground rounded-lg px-6 pb-6 pt-4 ${config.colSpan} border-2 border-transparent`}
-            >
+            <div key={chartId} className={cn(CARD_CLASS, config.colSpan)}>
               {config.component}
             </div>
           );
@@ -244,24 +249,30 @@ const YearlyChartsGrid = ({
   };
 
   return (
-    <Tabs defaultValue="trends" className="space-y-4">
-      <div className="flex items-center justify-between print:hidden">
-        <TabsList>
-          <TabsTrigger value="trends">Trends</TabsTrigger>
-          <TabsTrigger value="breakdowns">Breakdowns</TabsTrigger>
-          <TabsTrigger value="people">People</TabsTrigger>
-          <TabsTrigger value="top">Top</TabsTrigger>
-          <TabsTrigger value="all">All</TabsTrigger>
-        </TabsList>
-        <p className="text-muted-foreground text-xs">
-          <span>Drag to rearrange in All •</span>{" "}
-          <button
-            onClick={resetChartOrder}
-            className="hover:text-foreground underline transition-colors"
-          >
-            Reset
-          </button>
-        </p>
+    <Tabs value={tab} onValueChange={setTab} className="gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
+        <div className="-mx-1 max-w-full overflow-x-auto px-1">
+          <TabsList>
+            <TabsTrigger value="trends">Trends</TabsTrigger>
+            <TabsTrigger value="breakdowns">Categories</TabsTrigger>
+            <TabsTrigger value="people">People</TabsTrigger>
+            <TabsTrigger value="top">Top expenses</TabsTrigger>
+            <TabsTrigger value="all">All charts</TabsTrigger>
+          </TabsList>
+        </div>
+        {tab === "all" && (
+          <div className="text-muted-foreground flex items-center gap-2 text-xs">
+            <span>Drag cards to reorder</span>
+            <button
+              type="button"
+              onClick={resetChartOrder}
+              className="hover:text-foreground hover:bg-muted inline-flex items-center gap-1 rounded-md px-2 py-1 font-medium transition-colors"
+            >
+              <RotateCcw className="size-3" />
+              Reset
+            </button>
+          </div>
+        )}
       </div>
 
       <TabsContent value="trends">

@@ -123,7 +123,7 @@ const CategoryFilter = ({
               {selectedCategories.length} of {categories.length} selected
             </span>
             {filteredCount > 0 && (
-              <span className="font-medium text-orange-500">
+              <span className="font-medium text-warning">
                 {filteredCount} filtered out
               </span>
             )}

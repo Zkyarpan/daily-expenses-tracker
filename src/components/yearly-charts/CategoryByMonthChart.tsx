@@ -15,6 +15,8 @@ import { ExpenseWithDetails } from "@/entities/Expense";
 import { getShortMonthLabels, parseLocalDate } from "@/lib/dateUtils";
 import { formatCurrency, formatCurrencyCompact, getCategoryColor } from "@/lib/utils";
 
+import { ChartHeader } from "./ChartHeader";
+
 interface CategoryByMonthChartProps {
   expenses: ExpenseWithDetails[];
   year: number;
@@ -63,12 +65,13 @@ const CategoryByMonthChart = ({ expenses }: CategoryByMonthChartProps) => {
 
   return (
     <div>
-      <h2 className="mb-6 text-lg font-medium">
-        Category Trends Over The Year
-      </h2>
-      <ChartContainer config={chartConfig} className="min-h-[400px] w-full">
+      <ChartHeader
+        title="Category trends"
+        description="Monthly spending in each category across the year"
+      />
+      <ChartContainer config={chartConfig} className="aspect-auto h-[360px] w-full">
         <LineChart accessibilityLayer data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+          <CartesianGrid vertical={false} />
           <XAxis
             dataKey="month"
             tickLine={false}
@@ -108,7 +111,7 @@ const CategoryByMonthChart = ({ expenses }: CategoryByMonthChartProps) => {
               />
             }
           />
-          <ChartLegend content={<ChartLegendContent />} />
+          <ChartLegend content={<ChartLegendContent className="flex-wrap gap-x-4 gap-y-1.5" />} />
           {categories.map((category) => (
             <Line
               key={category}
