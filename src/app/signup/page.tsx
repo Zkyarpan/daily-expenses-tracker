@@ -1,25 +1,37 @@
 "use client";
 
 import { useState } from "react";
+import { EnvelopeSimple } from "@phosphor-icons/react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  AUTH_INPUT_CLASS,
+  AUTH_LABEL_CLASS,
+  AUTH_LINK_CLASS,
+  AuthError,
+  AuthHeading,
+  AuthNotice,
+  AuthShell,
+  AuthSubmit,
+  PasswordChecklist,
+  PasswordInput,
+} from "@/components/auth/AuthShell";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/utils/supabase/client";
 
-export default function SignupPage() {
-  const router = useRouter();
+const SIGNUP_HERO = {
+  features: [
+    "Free to use, no credit card required",
+    "Import from CSV or bank statements",
+    "Monthly budgets and smart alerts",
+  ],
+  heroText: "Create your free account and begin tracking your expenses in minutes.",
+  heroTitle: "Start your financial journey.",
+};
 
+export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -57,11 +69,11 @@ export default function SignupPage() {
 
     const { error: authError } = await supabase.auth.signUp({
       email,
-      password,
       options: {
         data: { full_name: name.trim() },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
+      password,
     });
 
     if (authError) {
@@ -76,140 +88,108 @@ export default function SignupPage() {
 
   if (success) {
     return (
-      <div className="bg-muted/40 flex min-h-svh flex-col items-center justify-center px-4 py-12">
-        <Card className="w-full max-w-sm shadow-sm">
-          <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-xl">Check your email</CardTitle>
-            <CardDescription>
-              We&apos;ve sent a confirmation link to <strong>{email}</strong>. Click
-              the link to activate your account.
-            </CardDescription>
-          </CardHeader>
-          <CardFooter>
-            <Button asChild variant="outline" className="w-full">
-              <Link href="/login">Back to sign in</Link>
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
+      <AuthShell {...SIGNUP_HERO}>
+        <AuthNotice title="Check your email" icon={<EnvelopeSimple size={26} />}>
+          <p>
+            We&apos;ve sent a confirmation link to{" "}
+            <span className="text-foreground font-medium">{email}</span>. Click the link to
+            activate your account.
+          </p>
+          <p>Can&apos;t find it? Check your spam folder.</p>
+        </AuthNotice>
+        <Button asChild variant="outline" className="mt-8 h-12 w-full rounded-2xl text-sm font-bold">
+          <Link href="/login">Back to sign in</Link>
+        </Button>
+      </AuthShell>
     );
   }
 
   return (
-    <div className="bg-muted/40 flex min-h-svh flex-col items-center justify-center px-4 py-12">
-      <div className="mb-8 flex flex-col items-center gap-2 text-center">
-        <div className="bg-primary text-primary-foreground flex size-10 items-center justify-center rounded-xl">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="size-5"
-            aria-hidden="true"
-          >
-            <path d="M20 12V22H4V12" />
-            <path d="M22 7H2v5h20V7z" />
-            <path d="M12 22V7" />
-            <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
-            <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
-          </svg>
+    <AuthShell {...SIGNUP_HERO}>
+      <AuthHeading title="Create an account" subtitle="Enter your details to get started for free." />
+
+      <form onSubmit={handleSubmit} noValidate className="space-y-5">
+        {error && <AuthError>{error}</AuthError>}
+
+        <div className="space-y-2">
+          <Label htmlFor="name" className={AUTH_LABEL_CLASS}>
+            Full name
+          </Label>
+          <Input
+            id="name"
+            type="text"
+            placeholder="Jane Smith"
+            autoComplete="name"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            disabled={loading}
+            className={AUTH_INPUT_CLASS}
+          />
         </div>
-        <span className="text-lg font-semibold tracking-tight">Daily Expenses</span>
-      </div>
 
-      <Card className="w-full max-w-sm shadow-sm">
-        <CardHeader className="space-y-1 pb-4">
-          <CardTitle className="text-xl">Create an account</CardTitle>
-          <CardDescription>Enter your details to get started.</CardDescription>
-        </CardHeader>
+        <div className="space-y-2">
+          <Label htmlFor="email" className={AUTH_LABEL_CLASS}>
+            Email address
+          </Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="you@example.com"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={loading}
+            className={AUTH_INPUT_CLASS}
+          />
+        </div>
 
-        <form onSubmit={handleSubmit} noValidate>
-          <CardContent className="space-y-4">
-            {error && (
-              <div
-                role="alert"
-                className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm"
-              >
-                {error}
-              </div>
-            )}
+        <div className="space-y-2">
+          <Label htmlFor="password" className={AUTH_LABEL_CLASS}>
+            Password
+          </Label>
+          <PasswordInput
+            id="password"
+            placeholder="Min. 8 characters"
+            autoComplete="new-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={loading}
+          />
+        </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="name">Full name</Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="Jane Smith"
-                autoComplete="name"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                disabled={loading}
-              />
-            </div>
+        <div className="space-y-2">
+          <Label htmlFor="confirm-password" className={AUTH_LABEL_CLASS}>
+            Confirm password
+          </Label>
+          <PasswordInput
+            id="confirm-password"
+            placeholder="••••••••"
+            autoComplete="new-password"
+            required
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            disabled={loading}
+            hideLabel="Hide confirm password"
+            showLabel="Show confirm password"
+          />
+        </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={loading}
-              />
-            </div>
+        <PasswordChecklist password={password} confirm={confirmPassword} />
 
-            <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Min. 8 characters"
-                autoComplete="new-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-              />
-            </div>
+        <AuthSubmit loading={loading} loadingText="Creating account…">
+          Create account
+        </AuthSubmit>
+      </form>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="confirm-password">Confirm password</Label>
-              <Input
-                id="confirm-password"
-                type="password"
-                placeholder="••••••••"
-                autoComplete="new-password"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-          </CardContent>
-
-          <CardFooter className="flex flex-col gap-3 pt-2">
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Creating account…" : "Create account"}
-            </Button>
-            <p className="text-muted-foreground text-center text-sm">
-              Already have an account?{" "}
-              <Link
-                href="/login"
-                className="text-foreground font-medium underline underline-offset-4"
-              >
-                Sign in
-              </Link>
-            </p>
-          </CardFooter>
-        </form>
-      </Card>
-    </div>
+      <p className="text-muted-foreground mt-6 text-center text-sm">
+        Already have an account?{" "}
+        <Link href="/login" className={AUTH_LINK_CLASS}>
+          Sign in →
+        </Link>
+      </p>
+    </AuthShell>
   );
 }

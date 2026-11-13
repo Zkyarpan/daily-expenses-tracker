@@ -1,20 +1,33 @@
 "use client";
 
 import { useState } from "react";
+import { ArrowLeft, EnvelopeSimple } from "@phosphor-icons/react";
 import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  AUTH_INPUT_CLASS,
+  AUTH_LABEL_CLASS,
+  AUTH_LINK_CLASS,
+  AuthError,
+  AuthHeading,
+  AuthNotice,
+  AuthShell,
+  AuthSubmit,
+} from "@/components/auth/AuthShell";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/utils/supabase/client";
+
+const RESET_HERO = {
+  features: [
+    "We email you a secure reset link",
+    "Your expenses and budgets stay untouched",
+    "Choose a new password and you're back in",
+  ],
+  heroText: "Enter the email you signed up with and we'll help you get back into your account.",
+  heroTitle: "Forgot your password? It happens.",
+};
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -40,12 +53,9 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    const { error: authError } = await supabase.auth.resetPasswordForEmail(
-      email,
-      {
-        redirectTo: `${window.location.origin}/auth/callback?next=/update-password`,
-      },
-    );
+    const { error: authError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/callback?next=/update-password`,
+    });
 
     if (authError) {
       setError(authError.message);
@@ -57,105 +67,77 @@ export default function ForgotPasswordPage() {
     setLoading(false);
   }
 
+  if (success) {
+    return (
+      <AuthShell {...RESET_HERO}>
+        <AuthNotice title="Check your inbox" icon={<EnvelopeSimple size={26} />}>
+          <p>
+            We&apos;ve sent a password reset link to{" "}
+            <span className="text-foreground font-medium">{email}</span>.
+          </p>
+          <p>
+            Didn&apos;t receive it? Check your spam folder or{" "}
+            <button
+              type="button"
+              className={AUTH_LINK_CLASS}
+              onClick={() => {
+                setSuccess(false);
+                setEmail("");
+              }}
+            >
+              try again
+            </button>
+            .
+          </p>
+        </AuthNotice>
+        <Button asChild variant="outline" className="mt-8 h-12 w-full rounded-2xl text-sm font-bold">
+          <Link href="/login">
+            <ArrowLeft size={16} weight="bold" />
+            Back to sign in
+          </Link>
+        </Button>
+      </AuthShell>
+    );
+  }
+
   return (
-    <div className="bg-muted/40 flex min-h-svh flex-col items-center justify-center px-4 py-12">
-      <div className="mb-8 flex flex-col items-center gap-2 text-center">
-        <div className="bg-primary text-primary-foreground flex size-10 items-center justify-center rounded-xl">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="size-5"
-            aria-hidden="true"
-          >
-            <path d="M20 12V22H4V12" />
-            <path d="M22 7H2v5h20V7z" />
-            <path d="M12 22V7" />
-            <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
-            <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
-          </svg>
+    <AuthShell {...RESET_HERO}>
+      <AuthHeading
+        title="Reset your password"
+        subtitle="Enter your account email and we'll send you a reset link."
+      />
+
+      <form onSubmit={handleSubmit} noValidate className="space-y-5">
+        {error && <AuthError>{error}</AuthError>}
+
+        <div className="space-y-2">
+          <Label htmlFor="email" className={AUTH_LABEL_CLASS}>
+            Email address
+          </Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="you@example.com"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={loading}
+            className={AUTH_INPUT_CLASS}
+          />
         </div>
-        <span className="text-lg font-semibold tracking-tight">Daily Expenses</span>
-      </div>
 
-      <Card className="w-full max-w-sm shadow-sm">
-        <CardHeader className="space-y-1 pb-4">
-          <CardTitle className="text-xl">Reset your password</CardTitle>
-          <CardDescription>
-            {success
-              ? "Check your inbox for a password reset link."
-              : "Enter your account email and we'll send a reset link."}
-          </CardDescription>
-        </CardHeader>
+        <AuthSubmit loading={loading} loadingText="Sending link…">
+          Send reset link
+        </AuthSubmit>
+      </form>
 
-        {success ? (
-          <CardFooter className="flex flex-col gap-3 pt-0">
-            <p className="text-muted-foreground text-sm">
-              Didn&apos;t receive an email? Check your spam folder or{" "}
-              <button
-                type="button"
-                className="text-foreground font-medium underline underline-offset-4"
-                onClick={() => {
-                  setSuccess(false);
-                  setEmail("");
-                }}
-              >
-                try again
-              </button>
-              .
-            </p>
-            <Button asChild variant="outline" className="w-full">
-              <Link href="/login">Back to sign in</Link>
-            </Button>
-          </CardFooter>
-        ) : (
-          <form onSubmit={handleSubmit} noValidate>
-            <CardContent className="space-y-4">
-              {error && (
-                <div
-                  role="alert"
-                  className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm"
-                >
-                  {error}
-                </div>
-              )}
-
-              <div className="space-y-1.5">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-            </CardContent>
-
-            <CardFooter className="flex flex-col gap-3 pt-2">
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Sending…" : "Send reset link"}
-              </Button>
-              <p className="text-muted-foreground text-center text-sm">
-                Remembered your password?{" "}
-                <Link
-                  href="/login"
-                  className="text-foreground font-medium underline underline-offset-4"
-                >
-                  Sign in
-                </Link>
-              </p>
-            </CardFooter>
-          </form>
-        )}
-      </Card>
-    </div>
+      <p className="text-muted-foreground mt-6 text-center text-sm">
+        Remembered your password?{" "}
+        <Link href="/login" className={AUTH_LINK_CLASS}>
+          Sign in →
+        </Link>
+      </p>
+    </AuthShell>
   );
 }

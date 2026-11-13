@@ -3,16 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+  AUTH_LABEL_CLASS,
+  AuthError,
+  AuthHeading,
+  AuthShell,
+  AuthSubmit,
+  PasswordChecklist,
+  PasswordInput,
+} from "@/components/auth/AuthShell";
+import { startRouteProgress } from "@/components/layout/RouteProgress";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/utils/supabase/client";
 
@@ -54,88 +54,64 @@ export default function UpdatePasswordPage() {
       return;
     }
 
+    startRouteProgress();
     router.push("/");
     router.refresh();
   }
 
   return (
-    <div className="bg-muted/40 flex min-h-svh flex-col items-center justify-center px-4 py-12">
-      <div className="mb-8 flex flex-col items-center gap-2 text-center">
-        <div className="bg-primary text-primary-foreground flex size-10 items-center justify-center rounded-xl">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="size-5"
-            aria-hidden="true"
-          >
-            <path d="M20 12V22H4V12" />
-            <path d="M22 7H2v5h20V7z" />
-            <path d="M12 22V7" />
-            <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
-            <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
-          </svg>
+    <AuthShell
+      heroTitle="Almost there."
+      heroText="Choose a new password and you'll go straight back to your dashboard."
+      features={[
+        "Use at least 8 characters",
+        "Mix letters, numbers and symbols",
+        "Avoid a password you use elsewhere",
+      ]}
+    >
+      <AuthHeading title="Set a new password" subtitle="Choose a strong password for your account." />
+
+      <form onSubmit={handleSubmit} noValidate className="space-y-5">
+        {error && <AuthError>{error}</AuthError>}
+
+        <div className="space-y-2">
+          <Label htmlFor="password" className={AUTH_LABEL_CLASS}>
+            New password
+          </Label>
+          <PasswordInput
+            id="password"
+            placeholder="Min. 8 characters"
+            autoComplete="new-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={loading}
+          />
         </div>
-        <span className="text-lg font-semibold tracking-tight">Daily Expenses</span>
-      </div>
 
-      <Card className="w-full max-w-sm shadow-sm">
-        <CardHeader className="space-y-1 pb-4">
-          <CardTitle className="text-xl">Set a new password</CardTitle>
-          <CardDescription>Choose a strong password for your account.</CardDescription>
-        </CardHeader>
+        <div className="space-y-2">
+          <Label htmlFor="confirm-password" className={AUTH_LABEL_CLASS}>
+            Confirm new password
+          </Label>
+          <PasswordInput
+            id="confirm-password"
+            placeholder="••••••••"
+            autoComplete="new-password"
+            required
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            disabled={loading}
+            hideLabel="Hide confirm password"
+            showLabel="Show confirm password"
+          />
+        </div>
 
-        <form onSubmit={handleSubmit} noValidate>
-          <CardContent className="space-y-4">
-            {error && (
-              <div
-                role="alert"
-                className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm"
-              >
-                {error}
-              </div>
-            )}
+        <PasswordChecklist password={password} confirm={confirmPassword} />
 
-            <div className="space-y-1.5">
-              <Label htmlFor="password">New password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Min. 8 characters"
-                autoComplete="new-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="confirm-password">Confirm new password</Label>
-              <Input
-                id="confirm-password"
-                type="password"
-                placeholder="••••••••"
-                autoComplete="new-password"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-          </CardContent>
-
-          <CardFooter className="pt-2">
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Updating…" : "Update password"}
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
-    </div>
+        <AuthSubmit loading={loading} loadingText="Updating password…">
+          Update password
+        </AuthSubmit>
+      </form>
+    </AuthShell>
   );
 }
