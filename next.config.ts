@@ -8,6 +8,14 @@ const isTurbopack = process.env.TURBOPACK === "1" ||
   process.argv.some((a) => a === "--turbopack");
 
 const nextConfig: NextConfig = {
+  // The dev-only "N" badge defaults to bottom-left, where it covered the
+  // sidebar's account details and sign-out button.
+  devIndicators: { position: "bottom-right" },
+
+  // Load the PDF reader with Node's own require on the server instead of
+  // bundling it: pdf.js ships a worker file that bundlers can't relocate.
+  serverExternalPackages: ["pdf-parse", "pdfjs-dist"],
+
   // ── Experimental optimisations ────────────────────────────────────────────
   experimental: {
     // Tree-shake large icon/component libraries — import only used symbols.

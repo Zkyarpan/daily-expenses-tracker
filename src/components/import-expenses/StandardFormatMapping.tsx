@@ -38,26 +38,26 @@ export function StandardFormatMapping() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold">Map Columns - Standard Format</h2>
-        <p className="text-muted-foreground text-sm">
-          Map your CSV columns to expense fields below.
+        <h2 className="text-base font-semibold tracking-tight">Match columns</h2>
+        <p className="text-muted-foreground mt-0.5 text-sm">
+          Standard format: one row per transaction. Tell us which column holds each field.
         </p>
       </div>
 
       <div className="space-y-4">
         {STANDARD_FIELDS.map((field) => (
-          <div key={field} className="flex items-center gap-3">
-            <span className="w-40 font-medium capitalize">
+          <div key={field} className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+            <span className="text-sm font-medium capitalize sm:w-40">
               {field.replace(/([A-Z])/g, " $1").trim()}
               {isRequired(field) && (
-                <span className="ml-1 text-red-500">*</span>
+                <span className="text-destructive ml-1" aria-hidden>*</span>
               )}
             </span>
             <Select
               onValueChange={(val) => handleStandardFieldSelect(field, val)}
               value={mapping[field as keyof typeof mapping] || NONE_VALUE}
             >
-              <SelectTrigger className="w-56">
+              <SelectTrigger className="w-full sm:w-56">
                 <SelectValue placeholder="Select column" />
               </SelectTrigger>
               <SelectContent>
@@ -73,14 +73,14 @@ export function StandardFormatMapping() {
         ))}
       </div>
 
-      <div className="bg-muted/50 rounded-lg border p-4">
-        <h3 className="mb-3 font-semibold">Default Date</h3>
-        <p className="text-muted-foreground mb-4 text-sm">
+      <div className="bg-muted/40 rounded-xl p-4">
+        <h3 className="text-sm font-semibold">Default date</h3>
+        <p className="text-muted-foreground mt-0.5 mb-4 text-sm">
           {mapping.date
             ? "Used when date column is empty or invalid."
             : "No date column mapped. Used for all expenses."}
         </p>
-        <div className="flex gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row">
           <div className="flex-1">
             <Label htmlFor="default-month" className="mb-2">
               Month
@@ -116,7 +116,7 @@ export function StandardFormatMapping() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Array.from({ length: 26 }, (_, i) => {
+                {Array.from({ length: new Date().getFullYear() - 1999 }, (_, i) => {
                   const year = (2000 + i).toString();
                   return (
                     <SelectItem key={year} value={year}>
@@ -133,7 +133,7 @@ export function StandardFormatMapping() {
         </p>
       </div>
 
-      <div className="flex flex-row-reverse gap-3">
+      <div className="flex flex-col-reverse gap-2 border-t pt-5 sm:flex-row sm:justify-end">
         <Button variant="outline" onClick={() => setStep("upload")}>
           Back
         </Button>
@@ -141,7 +141,7 @@ export function StandardFormatMapping() {
           onClick={handleMappingComplete}
           disabled={!mapping.amount || !mapping.description}
         >
-          Continue to Preview
+          Continue to preview
         </Button>
       </div>
     </div>

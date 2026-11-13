@@ -40,6 +40,8 @@ export type CallOptions = {
   messages: ChatMessage[];
   model?: string;
   timeoutMs?: number;
+  /** Upper bound on the answer length. Defaults to 1500 (enough for insights). */
+  maxCompletionTokens?: number;
   fetchImpl?: typeof fetch;
 };
 
@@ -66,6 +68,7 @@ export async function callPollinations({
   messages,
   model = DEFAULT_MODEL,
   timeoutMs = DEFAULT_TIMEOUT_MS,
+  maxCompletionTokens = 1500,
 }: CallOptions): Promise<PollinationsResult> {
   const keyProblem = checkApiKey(apiKey);
   if (keyProblem) return { message: keyProblem, ok: false, reason: "not_configured" };
@@ -77,7 +80,7 @@ export async function callPollinations({
   try {
     response = await fetchImpl(POLLINATIONS_URL, {
       body: JSON.stringify({
-        max_completion_tokens: 1500,
+        max_completion_tokens: maxCompletionTokens,
         messages,
         model,
         reasoning_effort: "low",
