@@ -1,23 +1,17 @@
 "use client";
 
-/**
- * src/app/(protected)/analytics/page.tsx
- *
- * Feature 6: Advanced Analytics and Financial Reports.
- *
- * Overview cards, spending charts and financial reports for a selected month,
- * year or custom date range, optionally filtered by category. Every figure on
- * the page comes from a single buildAnalytics() result (see useAnalytics), so
- * cards, charts, tables and CSV exports always agree.
- *
- * Data is the signed-in user's own expenses and budgets only (RLS + explicit
- * user filter). In demo mode (no Supabase configured) the sample dataset is
- * used and clearly labelled; live mode never shows sample figures.
- */
-
 import { useCallback, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, ArrowUpRight, CalendarDays, Download, Loader2, ReceiptText, Upload } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowUpRight,
+  CalendarDays,
+  Download,
+  Loader2,
+  ReceiptText,
+  RefreshCw,
+  Upload,
+} from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 
@@ -43,19 +37,18 @@ import { getIsDemoMode } from "@/lib/supabase";
 import { getErrorMessage } from "@/lib/utils";
 
 const ChartsSkeleton = () => (
-  <div className="space-y-6" aria-hidden>
-    <div className="grid gap-6 lg:grid-cols-3">
-      <Skeleton className="h-[372px] rounded-xl lg:col-span-2" />
-      <Skeleton className="h-[372px] rounded-xl" />
+  <div className="space-y-5" aria-hidden>
+    <div className="grid gap-5 lg:grid-cols-3">
+      <Skeleton className="h-[360px] rounded-xl lg:col-span-2" />
+      <Skeleton className="h-[360px] rounded-xl" />
     </div>
-    <div className="grid gap-6 lg:grid-cols-2">
-      <Skeleton className="h-[372px] rounded-xl" />
-      <Skeleton className="h-[372px] rounded-xl" />
+    <div className="grid gap-5 lg:grid-cols-2">
+      <Skeleton className="h-[360px] rounded-xl" />
+      <Skeleton className="h-[360px] rounded-xl" />
     </div>
   </div>
 );
 
-// Recharts is only downloaded when charts render (same as Yearly Charts).
 const AnalyticsCharts = dynamic(() => import("@/components/analytics/AnalyticsCharts"), {
   loading: () => <ChartsSkeleton />,
   ssr: false,
@@ -64,11 +57,13 @@ const AnalyticsCharts = dynamic(() => import("@/components/analytics/AnalyticsCh
 const isDemoMode = getIsDemoMode();
 const ALL_CATEGORIES: string[] = [];
 
-const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const SHORT_MONTHS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
 
 const defaultSelection = (): PeriodSelection => {
   if (isDemoMode) {
-    // Sample data lives in a fixed year; open on it so the demo is not empty.
     const demoYear = expensesData.reduce(
       (latest, e) => Math.max(latest, parseLocalDate(e.date).getFullYear()),
       0,
@@ -87,7 +82,8 @@ const comparisonLabelFor = (selection: PeriodSelection, previousStart: Date, day
   return `vs previous ${days} ${days === 1 ? "day" : "days"}`;
 };
 
-const sameSelection = (a: PeriodSelection, b: PeriodSelection) => JSON.stringify(a) === JSON.stringify(b);
+const sameSelection = (a: PeriodSelection, b: PeriodSelection) =>
+  JSON.stringify(a) === JSON.stringify(b);
 
 export default function AnalyticsPage() {
   const queryClient = useQueryClient();
@@ -105,12 +101,22 @@ export default function AnalyticsPage() {
   }, [initialSelection]);
 
   const comparisonLabel = useMemo(
-    () => (data ? comparisonLabelFor(selection, data.previousRange.start, rangeLengthInDays(data.range)) : ""),
+    () =>
+      data
+        ? comparisonLabelFor(
+            selection,
+            data.previousRange.start,
+            rangeLengthInDays(data.range),
+          )
+        : "",
     [data, selection],
   );
 
   const budgetTotals = useMemo(
-    () => (data?.budgets ? { limit: data.budgets.totalLimit, spent: data.budgets.totalSpent } : null),
+    () =>
+      data?.budgets
+        ? { limit: data.budgets.totalLimit, spent: data.budgets.totalSpent }
+        : null,
     [data],
   );
 
@@ -129,10 +135,12 @@ export default function AnalyticsPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="text-muted-foreground mb-2 flex flex-wrap items-center gap-2 text-sm">
-            <CalendarDays className="size-4" aria-hidden />
+          <div className="mb-1.5 flex flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground">
+            <CalendarDays className="size-3.5" aria-hidden />
             <span>{data ? formatRangeLabel(data.range) : "Loading period…"}</span>
-            {isDemoMode && <Badge variant="secondary">Demo data</Badge>}
+            {isDemoMode && (
+              <Badge variant="secondary" className="text-[10px]">Demo data</Badge>
+            )}
             {analytics.isUpdating && (
               <span className="inline-flex items-center gap-1 text-xs" role="status">
                 <Loader2 className="size-3 animate-spin" aria-hidden />
@@ -140,8 +148,13 @@ export default function AnalyticsPage() {
               </span>
             )}
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight">Analytics &amp; reports</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
+          <h1
+            className="text-2xl font-semibold tracking-tight"
+            style={{ letterSpacing: "-0.025em" }}
+          >
+            Analytics &amp; reports
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Understand your spending, compare periods and export financial reports.
           </p>
         </div>
@@ -149,16 +162,22 @@ export default function AnalyticsPage() {
           <Button asChild variant="ghost" size="sm">
             <Link href="/yearly-charts">
               Yearly charts
-              <ArrowUpRight className="ml-1 size-4" aria-hidden />
+              <ArrowUpRight className="ml-1 size-3.5" aria-hidden />
             </Link>
           </Button>
-          <Button size="sm" className="gap-1.5" onClick={handleExportAll} disabled={!data}>
-            <Download className="size-4" aria-hidden />
-            Export full report (CSV)
+          <Button
+            size="sm"
+            className="gap-1.5"
+            onClick={handleExportAll}
+            disabled={!data}
+          >
+            <Download className="size-3.5" aria-hidden />
+            Export CSV
           </Button>
         </div>
       </div>
 
+      {/* Filters */}
       <AnalyticsFilters
         selection={selection}
         onSelectionChange={setSelection}
@@ -170,18 +189,22 @@ export default function AnalyticsPage() {
 
       {/* Error state */}
       {!!analytics.error && (
-        <Card className="border-destructive/40 shadow-none">
+        <Card className="border-destructive/30 shadow-none">
           <CardContent className="flex flex-col items-center px-6 py-10 text-center">
-            <AlertTriangle className="text-destructive mb-3 size-8" aria-hidden />
-            <p className="font-medium">Analytics could not be loaded</p>
-            <p className="text-muted-foreground mt-1 max-w-md text-sm">
+            <div className="mb-3 flex size-12 items-center justify-center rounded-xl bg-destructive/10">
+              <AlertTriangle className="size-6 text-destructive" aria-hidden />
+            </div>
+            <p className="font-semibold">Analytics could not be loaded</p>
+            <p className="mt-1.5 max-w-md text-sm text-muted-foreground">
               {getErrorMessage(analytics.error, "An unexpected error occurred.")}
             </p>
             <Button
-              className="mt-4"
+              className="mt-5 gap-1.5"
               variant="outline"
+              size="sm"
               onClick={() => queryClient.invalidateQueries({ queryKey: ["yearly-expenses"] })}
             >
+              <RefreshCw className="size-3.5" />
               Try again
             </Button>
           </CardContent>
@@ -196,6 +219,7 @@ export default function AnalyticsPage() {
         </>
       )}
 
+      {/* Data */}
       {data && (
         <div
           className={analytics.isUpdating ? "opacity-70 transition-opacity" : "transition-opacity"}
@@ -216,29 +240,29 @@ export default function AnalyticsPage() {
               </>
             ) : (
               <Card className="border-dashed shadow-none">
-                <CardContent className="flex flex-col items-center justify-center px-6 py-14 text-center">
-                  <div className="bg-primary/10 text-primary mb-5 flex size-14 items-center justify-center rounded-2xl">
-                    <ReceiptText className="size-7" aria-hidden />
+                <CardContent className="flex flex-col items-center justify-center px-6 py-16 text-center">
+                  <div className="mb-5 flex size-14 items-center justify-center rounded-2xl bg-primary/10">
+                    <ReceiptText className="size-7 text-primary" aria-hidden />
                   </div>
                   <h2 className="text-lg font-semibold">No expenses in this period</h2>
-                  <p className="text-muted-foreground mt-2 max-w-md text-sm leading-6">
+                  <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
                     {categoryKeys.length > 0
                       ? "Nothing was spent in the selected categories. Try including more categories or choosing a different period."
                       : "Choose a different month, year or date range, or add expenses to start building your reports."}
                   </p>
                   <div className="mt-6 flex flex-col gap-2 sm:flex-row">
                     {!isDefault && (
-                      <Button variant="outline" onClick={handleReset}>
+                      <Button variant="outline" size="sm" onClick={handleReset}>
                         Reset filters
                       </Button>
                     )}
-                    <Button asChild>
+                    <Button asChild size="sm">
                       <Link href="/expenses">Add expenses</Link>
                     </Button>
-                    <Button asChild variant="outline">
+                    <Button asChild variant="outline" size="sm">
                       <Link href="/import-expenses">
-                        <Upload className="mr-2 size-4" aria-hidden />
-                        Import a statement
+                        <Upload className="mr-1.5 size-3.5" aria-hidden />
+                        Import statement
                       </Link>
                     </Button>
                   </div>
@@ -246,10 +270,15 @@ export default function AnalyticsPage() {
               </Card>
             )}
 
-            <p className="text-muted-foreground text-xs">
-              Calculated from {analytics.recordsLoaded.toLocaleString("en-GB")} expense
-              {analytics.recordsLoaded === 1 ? "" : "s"} loaded for {analytics.years.join(", ")}
-              {analytics.computeMs !== null && ` in ${analytics.computeMs.toFixed(1)} ms`}. Amounts in GBP.
+            <p className="text-xs text-muted-foreground">
+              Calculated from{" "}
+              {analytics.recordsLoaded.toLocaleString("en-GB")} expense
+              {analytics.recordsLoaded === 1 ? "" : "s"} loaded for{" "}
+              {analytics.years.join(", ")}
+              {analytics.computeMs !== null
+                ? ` in ${analytics.computeMs.toFixed(1)} ms`
+                : ""}
+              . Amounts in GBP.
             </p>
           </div>
         </div>

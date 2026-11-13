@@ -41,7 +41,7 @@ const STATUS_LABEL: Record<BudgetStatus, string> = {
 const STATUS_CLASS: Record<BudgetStatus, string> = {
   critical: "border-orange-500/40 text-orange-600 dark:text-orange-400",
   over: "border-destructive/40 text-destructive",
-  under: "border-green-600/40 text-green-700 dark:text-green-400",
+  under: "border-success/40 text-success",
   warning: "border-amber-500/40 text-amber-600 dark:text-amber-400",
 };
 
@@ -132,7 +132,7 @@ const AnalyticsReports = ({ budgetsStatus, data }: AnalyticsReportsProps) => {
                       className={cn(
                         "text-right tabular-nums",
                         m.change !== null && m.change > 0 && "text-destructive",
-                        m.change !== null && m.change < 0 && "text-green-700 dark:text-green-400",
+                        m.change !== null && m.change < 0 && "text-success",
                       )}
                     >
                       {signedMoney(m.change)}

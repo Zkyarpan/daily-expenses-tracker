@@ -14,7 +14,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardDescription } from "@/components/ui/card";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -37,30 +37,38 @@ type MetricCardProps = {
 };
 
 const MetricCard = ({ footer, hint, icon, label, value }: MetricCardProps) => (
-  <Card className="gap-3 py-5 shadow-none">
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 px-5">
-      <div className="flex items-center gap-1.5">
-        <CardDescription>{label}</CardDescription>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              className="text-muted-foreground hover:text-foreground focus-visible:ring-ring rounded-full focus-visible:ring-2 focus-visible:outline-none"
-              aria-label={`About ${label}`}
-            >
-              <Info className="size-3.5" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-64 text-xs leading-5">{hint}</TooltipContent>
-        </Tooltip>
+  <Card className="shadow-sm transition-shadow hover:shadow-md">
+    <CardContent className="p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1">
+            <CardDescription className="text-[10px] font-medium uppercase tracking-wider">
+              {label}
+            </CardDescription>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={`About ${label}`}
+                >
+                  <Info className="size-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-64 text-xs leading-5">{hint}</TooltipContent>
+            </Tooltip>
+          </div>
+          <div className="mt-1.5 truncate text-2xl font-semibold tabular-nums tracking-tight">
+            {value}
+          </div>
+          {footer && (
+            <div className="mt-1.5 text-xs text-muted-foreground">{footer}</div>
+          )}
+        </div>
+        <span className="shrink-0 text-muted-foreground" aria-hidden>
+          {icon}
+        </span>
       </div>
-      <span className="text-muted-foreground" aria-hidden>
-        {icon}
-      </span>
-    </CardHeader>
-    <CardContent className="px-5">
-      <div className="truncate text-2xl font-semibold tracking-tight tabular-nums">{value}</div>
-      {footer && <div className="text-muted-foreground mt-1 text-xs">{footer}</div>}
     </CardContent>
   </Card>
 );
@@ -91,7 +99,7 @@ export const ChangeIndicator = ({
         className={cn(
           "inline-flex items-center gap-0.5 font-medium",
           !flat && up && "text-destructive",
-          !flat && !up && "text-green-600 dark:text-green-400",
+          !flat && !up && "text-success",
         )}
       >
         <Icon className="size-3" aria-hidden />
@@ -120,10 +128,10 @@ const Money = ({ amount }: { amount: number }) =>
   );
 
 const BUDGET_TONE = {
-  critical: "bg-orange-500",
+  critical: "bg-warning",
   over: "bg-destructive",
-  under: "bg-green-600 dark:bg-green-500",
-  warning: "bg-amber-500",
+  under: "bg-success",
+  warning: "bg-warning/70",
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────────

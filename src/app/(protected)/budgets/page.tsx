@@ -1,22 +1,7 @@
 "use client";
 
-/**
- * src/app/(protected)/budgets/page.tsx
- *
- * Feature 4: Monthly Category Budget Management
- * Feature 5: Automated Spending Alerts — per-month banner
- *
- * Shows a responsive grid of budget cards for the selected month/year.
- * Each card displays the spending progress bar and remaining balance.
- * The page supports create, edit, and delete operations via dialogs.
- *
- * NOTE: Requires Supabase to be configured and the migration
- * 20240003000000_create_budgets.sql to be applied.
- * In demo mode (no Supabase) an informational banner is shown.
- */
-
 import { useState } from "react";
-import { PiggyBank, Plus } from "lucide-react";
+import { AlertCircle, PiggyBank, Plus, TrendingDown } from "lucide-react";
 import { toast } from "sonner";
 
 import { AlertBanner } from "@/components/alerts/AlertBanner";
@@ -44,13 +29,24 @@ const MONTH_NAMES = [
 
 function BudgetCardSkeleton() {
   return (
-    <Card>
-      <CardContent className="space-y-3 pt-6">
-        <Skeleton className="h-4 w-1/2" />
-        <Skeleton className="h-2 w-full" />
-        <div className="flex justify-between">
-          <Skeleton className="h-3 w-1/3" />
-          <Skeleton className="h-3 w-1/4" />
+    <Card className="shadow-sm">
+      <CardContent className="space-y-4 p-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Skeleton className="size-7 rounded-md" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+        </div>
+        <div className="flex items-end justify-between">
+          <Skeleton className="h-6 w-20" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+        <div className="space-y-1.5">
+          <Skeleton className="h-1.5 w-full rounded-full" />
+          <div className="flex justify-between">
+            <Skeleton className="h-3 w-12" />
+            <Skeleton className="h-3 w-16" />
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -60,8 +56,6 @@ function BudgetCardSkeleton() {
 export default function BudgetsPage() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
-  // month0 is 0-based (used by MonthYearSelector and useExpenses)
-  // month1 is 1-based (used by Budget API)
   const [month0, setMonth0] = useState(now.getMonth());
   const month1 = month0 + 1;
 
@@ -70,9 +64,6 @@ export default function BudgetsPage() {
     setYear(newYear);
   };
 
-  // ── Fetch budgets + expenses (for spending calculation) ────────────────
-  // useBudgets derives spending from the shared useExpenses query, so budget
-  // cards and alerts update when expenses change.
   const {
     data: budgets = [],
     isLoading,
@@ -81,12 +72,10 @@ export default function BudgetsPage() {
     error,
   } = useBudgets(year, month1);
 
-  // Same query useBudgets observes (deduplicated by React Query)
   useExpenses(year, month0);
 
   const { create, update, remove } = useBudgetMutations(year, month1);
 
-  // ── Spending alerts ────────────────────────────────────────────────────────
   const currentUser = useCurrentUser();
   const { currentMonthAlerts } = useSpendingAlerts(
     currentUser?.id,
@@ -94,16 +83,13 @@ export default function BudgetsPage() {
     month1,
     budgets,
   );
-  // Also get dismiss from global context for the banner
   const { dismiss: dismissAlert } = useAlerts();
 
-  // ── Dialog state ────────────────────────────────────────────────────────
   const [formDialogOpen, setFormDialogOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingBudget, setDeletingBudget] = useState<BudgetWithSpending | null>(null);
 
-  // ── Handlers ────────────────────────────────────────────────────────────
   const handleOpenCreate = () => {
     setEditingBudget(undefined);
     setFormDialogOpen(true);
@@ -148,76 +134,76 @@ export default function BudgetsPage() {
     toast.success("Budget deleted");
   };
 
-  // ── Summary totals ───────────────────────────────────────────────────────
   const totalLimit = budgets.reduce((s, b) => s + b.limitAmount, 0);
   const totalSpent = budgets.reduce((s, b) => s + b.spent, 0);
   const totalRemaining = totalLimit - totalSpent;
   const isOverall = totalSpent > totalLimit && totalLimit > 0;
 
   const isDemo = !supabase;
-  // Budgets can't be loaded or saved until the budgets table exists.
   const isReady = !isDemo && !isTableMissing;
 
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div className="bg-secondary rounded-lg p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Monthly Budgets</h1>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Set spending limits by category and track your progress
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <MonthYearSelector
-              currentMonth={month0}
-              currentYear={year}
-              onMonthYearChange={handleMonthYearChange}
-            />
-            {isReady && (
-              <Button size="sm" className="gap-2" onClick={handleOpenCreate}>
-                <Plus className="h-4 w-4" />
-                Add budget
-              </Button>
-            )}
-          </div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight" style={{ letterSpacing: "-0.025em" }}>
+            Monthly Budgets
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Set spending limits by category and track your progress.
+          </p>
         </div>
-
-        {/* Summary row (only shown when there are budgets) */}
-        {!isLoading && budgets.length > 0 && (
-          <div className="mt-6 flex flex-wrap gap-6">
-            <div>
-              <p className="text-muted-foreground text-xs uppercase tracking-wide">
-                Total limit
-              </p>
-              <p className="text-xl font-bold">{formatCurrency(totalLimit)}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground text-xs uppercase tracking-wide">
-                Total spent
-              </p>
-              <p className="text-xl font-bold">{formatCurrency(totalSpent)}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground text-xs uppercase tracking-wide">
-                Remaining
-              </p>
-              <p
-                className={`text-xl font-bold ${
-                  isOverall
-                    ? "text-destructive"
-                    : "text-green-600 dark:text-green-400"
-                }`}
-              >
-                {isOverall ? "-" : ""}{formatCurrency(Math.abs(totalRemaining))}
-              </p>
-            </div>
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <MonthYearSelector
+            currentMonth={month0}
+            currentYear={year}
+            onMonthYearChange={handleMonthYearChange}
+          />
+          {isReady && (
+            <Button size="sm" className="gap-1.5" onClick={handleOpenCreate}>
+              <Plus className="size-3.5" />
+              Add budget
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Spending alerts banner — shown when there are active alerts for this month */}
+      {/* Summary row */}
+      {!isLoading && budgets.length > 0 && (
+        <div className="grid grid-cols-3 gap-3 sm:flex sm:flex-wrap sm:gap-5">
+          <div className="rounded-lg border border-border/60 bg-card p-4 shadow-sm">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              Total limit
+            </p>
+            <p className="mt-1.5 text-xl font-semibold tabular-nums tracking-tight">
+              {formatCurrency(totalLimit)}
+            </p>
+          </div>
+          <div className="rounded-lg border border-border/60 bg-card p-4 shadow-sm">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              Total spent
+            </p>
+            <p className="mt-1.5 text-xl font-semibold tabular-nums tracking-tight">
+              {formatCurrency(totalSpent)}
+            </p>
+          </div>
+          <div className="rounded-lg border border-border/60 bg-card p-4 shadow-sm">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              Remaining
+            </p>
+            <p
+              className={`mt-1.5 text-xl font-semibold tabular-nums tracking-tight ${
+                isOverall ? "text-destructive" : "text-success"
+              }`}
+            >
+              {isOverall ? "-" : ""}{formatCurrency(Math.abs(totalRemaining))}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Spending alerts banner */}
       {!isDemo && currentMonthAlerts.length > 0 && (
         <AlertBanner
           alerts={currentMonthAlerts}
@@ -227,39 +213,36 @@ export default function BudgetsPage() {
 
       {/* Demo mode banner */}
       {isDemo && (
-        <Card>
-          <CardContent className="py-6 text-center">
-            <PiggyBank className="text-muted-foreground mx-auto mb-3 h-10 w-10" />
-            <p className="font-medium">Budgets require a Supabase connection</p>
-            <p className="text-muted-foreground mt-1 text-sm">
+        <Card className="border-dashed shadow-none">
+          <CardContent className="flex flex-col items-center justify-center py-14 text-center">
+            <div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-muted">
+              <PiggyBank className="size-6 text-muted-foreground" />
+            </div>
+            <p className="font-semibold">Budgets require a Supabase connection</p>
+            <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
               Configure your Supabase credentials in{" "}
-              <code className="bg-muted rounded px-1 text-xs">.env.local</code>{" "}
-              and apply migration{" "}
-              <code className="bg-muted rounded px-1 text-xs">
-                20240003000000_create_budgets.sql
-              </code>{" "}
-              to use this feature.
+              <code className="rounded bg-muted px-1 py-0.5 text-xs">.env.local</code>{" "}
+              and apply the budgets migration to use this feature.
             </p>
           </CardContent>
         </Card>
       )}
 
-      {/* Setup state — the budgets table has not been created yet */}
+      {/* Setup state */}
       {!isDemo && isTableMissing && (
-        <Card>
-          <CardContent className="mx-auto max-w-xl py-10 text-center">
-            <PiggyBank className="text-muted-foreground mx-auto mb-3 h-10 w-10" />
-            <p className="font-medium">Budgets need a one-time database setup</p>
-            <p className="text-muted-foreground mt-2 text-sm leading-6">
-              The <code className="bg-muted rounded px-1 text-xs">budgets</code> table
-              doesn&apos;t exist in your Supabase project yet. In the Supabase dashboard,
-              open <span className="text-foreground font-medium">SQL Editor → New query</span>,
-              paste the contents of{" "}
-              <code className="bg-muted rounded px-1 text-xs">
+        <Card className="border-dashed shadow-none">
+          <CardContent className="mx-auto max-w-lg py-14 text-center">
+            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-warning/10">
+              <AlertCircle className="size-6 text-warning" />
+            </div>
+            <p className="font-semibold">Budgets need a one-time database setup</p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              The <code className="rounded bg-muted px-1 py-0.5 text-xs">budgets</code> table
+              doesn&apos;t exist yet. Open the Supabase SQL Editor, paste the contents of{" "}
+              <code className="rounded bg-muted px-1 py-0.5 text-xs">
                 supabase/migrations/20240006000000_create_budgets_table.sql
               </code>{" "}
-              and click <span className="text-foreground font-medium">Run</span>. Then
-              reload this page. Your expenses are not affected.
+              and click Run. Then reload this page.
             </p>
           </CardContent>
         </Card>
@@ -267,11 +250,11 @@ export default function BudgetsPage() {
 
       {/* Error state */}
       {isError && !isDemo && (
-        <Card>
-          <CardContent className="py-6 text-center">
-            <p className="text-destructive font-medium">Failed to load budgets</p>
-            <p className="text-muted-foreground mt-1 text-sm">
-              {/* Supabase errors are plain objects, not Error instances */}
+        <Card className="border-destructive/30 shadow-none">
+          <CardContent className="flex flex-col items-center py-10 text-center">
+            <AlertCircle className="mb-3 size-8 text-destructive" />
+            <p className="font-semibold text-destructive">Failed to load budgets</p>
+            <p className="mt-1 text-sm text-muted-foreground">
               {getErrorMessage(error, "An unexpected error occurred.")}
             </p>
           </CardContent>
@@ -280,7 +263,7 @@ export default function BudgetsPage() {
 
       {/* Loading state */}
       {isLoading && !isDemo && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
             <BudgetCardSkeleton key={i} />
           ))}
@@ -289,17 +272,19 @@ export default function BudgetsPage() {
 
       {/* Empty state */}
       {!isLoading && !isError && isReady && budgets.length === 0 && (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <PiggyBank className="text-muted-foreground mx-auto mb-3 h-10 w-10" />
-            <p className="font-medium">
+        <Card className="border-dashed shadow-none">
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-primary/10">
+              <TrendingDown className="size-6 text-primary" />
+            </div>
+            <p className="font-semibold">
               No budgets for {MONTH_NAMES[month0]} {year}
             </p>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Add a budget to start tracking your spending limits.
+            <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
+              Add a budget to start tracking your spending limits against actual expenses.
             </p>
-            <Button className="mt-4 gap-2" onClick={handleOpenCreate}>
-              <Plus className="h-4 w-4" />
+            <Button className="mt-6 gap-1.5" size="sm" onClick={handleOpenCreate}>
+              <Plus className="size-3.5" />
               Add your first budget
             </Button>
           </CardContent>
@@ -308,7 +293,7 @@ export default function BudgetsPage() {
 
       {/* Budget cards grid */}
       {!isLoading && !isError && !isDemo && budgets.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {budgets.map((b) => (
             <BudgetCard
               key={b.id}

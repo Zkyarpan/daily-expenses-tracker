@@ -1,23 +1,12 @@
 "use client";
 
-/**
- * src/components/budgets/BudgetCard.tsx
- *
- * Displays a single budget with:
- *  - Category name
- *  - Progress bar (spent / limit)
- *  - Remaining balance (green if under, red if over)
- *  - Edit and Delete action buttons
- */
-
 import { Pencil, Trash2 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import type { BudgetWithSpending } from "@/entities/Budget";
 import { CATEGORY_ICONS_BY_NAME } from "@/lib/config";
 import { formatCurrency } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 
 interface BudgetCardProps {
   budget: BudgetWithSpending;
@@ -27,90 +16,110 @@ interface BudgetCardProps {
 
 export function BudgetCard({ budget, onEdit, onDelete }: BudgetCardProps) {
   const isOverBudget = budget.spent > budget.limitAmount;
+  const isNearLimit = !isOverBudget && budget.progressPercent >= 80;
   const CategoryIcon = CATEGORY_ICONS_BY_NAME[budget.categoryName];
 
+  // Progress bar color
+  const progressColor = isOverBudget
+    ? "bg-destructive"
+    : isNearLimit
+      ? "bg-warning"
+      : "bg-primary";
+
   return (
-    <Card className="flex flex-col">
-      <CardHeader className="pb-2">
-        <div className="flex items-start justify-between gap-2">
-          {/* Category name + icon */}
+    <Card className="group flex flex-col shadow-sm transition-shadow hover:shadow-md">
+      <CardContent className="flex flex-1 flex-col gap-4 p-5">
+        {/* Header row: category + actions */}
+        <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             {CategoryIcon && (
-              <span className="text-muted-foreground shrink-0">
-                <CategoryIcon className="h-4 w-4" />
+              <span
+                className={`flex size-7 shrink-0 items-center justify-center rounded-md ${
+                  isOverBudget
+                    ? "bg-destructive/10 text-destructive"
+                    : "bg-primary/10 text-primary"
+                }`}
+              >
+                <CategoryIcon className="size-3.5" />
               </span>
             )}
-            <h3 className="truncate text-sm font-semibold">
-              {budget.categoryName}
-            </h3>
+            <h3 className="truncate text-sm font-semibold">{budget.categoryName}</h3>
           </div>
 
-          {/* Actions */}
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className="size-7 text-muted-foreground hover:text-foreground"
               aria-label={`Edit ${budget.categoryName} budget`}
               onClick={() => onEdit(budget)}
             >
-              <Pencil className="h-3.5 w-3.5" />
+              <Pencil className="size-3.5" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              className="text-destructive hover:text-destructive h-7 w-7"
+              className="size-7 text-muted-foreground hover:text-destructive"
               aria-label={`Delete ${budget.categoryName} budget`}
               onClick={() => onDelete(budget)}
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 className="size-3.5" />
             </Button>
           </div>
         </div>
-      </CardHeader>
 
-      <CardContent className="flex flex-1 flex-col gap-3">
-        {/* Amount summary row */}
-        <div className="flex items-baseline justify-between text-sm">
-          <span className="text-muted-foreground">Spent</span>
-          <span className="font-medium">{formatCurrency(budget.spent)}</span>
+        {/* Amount row */}
+        <div className="flex items-end justify-between gap-2">
+          <div>
+            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              Spent
+            </p>
+            <p className="mt-0.5 text-xl font-semibold tabular-nums tracking-tight">
+              {formatCurrency(budget.spent)}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              Limit
+            </p>
+            <p className="mt-0.5 text-sm font-medium tabular-nums text-muted-foreground">
+              {formatCurrency(budget.limitAmount)}
+            </p>
+          </div>
         </div>
 
         {/* Progress bar */}
-        <Progress
-          value={budget.progressPercent}
-          className="h-2"
-          aria-label={`${Math.round(budget.progressPercent)}% of budget used`}
-          // Over-budget: destructive colour via inline style override
-          style={
-            isOverBudget
-              ? ({ "--progress-foreground": "hsl(var(--destructive))" } as React.CSSProperties)
-              : undefined
-          }
-        />
-
-        {/* Limit and remaining */}
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">
-            Limit: {formatCurrency(budget.limitAmount)}
-          </span>
-          <span
-            className={
-              isOverBudget
-                ? "text-destructive font-semibold"
-                : "text-green-600 font-medium dark:text-green-400"
-            }
-          >
-            {isOverBudget
-              ? `${formatCurrency(Math.abs(budget.remaining))} over`
-              : `${formatCurrency(budget.remaining)} left`}
-          </span>
+        <div className="space-y-1.5">
+          <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${progressColor}`}
+              style={{ width: `${Math.min(budget.progressPercent, 100)}%` }}
+              aria-label={`${Math.round(budget.progressPercent)}% of budget used`}
+              role="progressbar"
+              aria-valuenow={Math.round(budget.progressPercent)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">
+              {Math.round(budget.progressPercent)}% used
+            </span>
+            <span
+              className={`text-xs font-medium ${
+                isOverBudget
+                  ? "text-destructive"
+                  : isNearLimit
+                    ? "text-warning"
+                    : "text-success"
+              }`}
+            >
+              {isOverBudget
+                ? `${formatCurrency(Math.abs(budget.remaining))} over`
+                : `${formatCurrency(budget.remaining)} left`}
+            </span>
+          </div>
         </div>
-
-        {/* Percentage label */}
-        <p className="text-muted-foreground text-xs">
-          {Math.round(budget.progressPercent)}% used
-        </p>
       </CardContent>
     </Card>
   );
