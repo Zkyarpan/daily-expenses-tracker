@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
+import { startRouteProgress } from "@/components/layout/RouteProgress";
 import {
   CommandDialog,
   CommandEmpty,
@@ -45,6 +46,7 @@ export function CommandPalette() {
   }, []);
 
   const handleSelect = (href: string) => {
+    if (href !== window.location.pathname) startRouteProgress();
     router.push(href);
     setOpen(false);
   };
