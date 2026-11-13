@@ -45,18 +45,18 @@ export const CATEGORY_COLORS_BY_NAME = {
   Utilities: "oklch(0.58 0.16 200)", // Dark Blue (automotive)
 } as const;
 
-export const MEMBER_CHART_COLORS = [
-  "#0088FE",
-  "#00C49F",
-  "#FFBB28",
-  "#FF8042",
-  "#8884D8",
-  "#82CA9D",
-  "#FFC658",
-  "#8DD1E1",
-  "#D084D0",
-  "#FF6B6B",
+// Series colours for people, places and other non-category breakdowns. These
+// are the theme's chart tokens (globals.css), so charts follow the light/dark
+// palette instead of fixed hex values.
+export const CHART_PALETTE = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
 ];
+
+export const MEMBER_CHART_COLORS = CHART_PALETTE;
 
 type CurrencyCode = "USD" | "PKR" | "EUR" | "GBP" | "INR";
 type Symbol = "$" | "Rs." | "€" | "£" | "₹";

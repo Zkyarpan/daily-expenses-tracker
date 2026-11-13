@@ -69,24 +69,44 @@ export const getCategoryColor = (categoryName: string): string => {
   );
 };
 
+// Constructing an Intl.NumberFormat is far more expensive than calling
+// .format(), and these helpers run once per table row on every render, so the
+// default formatters are created once and reused.
+const CURRENCY_FORMAT: Intl.NumberFormatOptions = {
+  currency: LOCALE_CONFIG.currency,
+  style: LOCALE_CONFIG.style,
+};
+const COMPACT_CURRENCY_FORMAT: Intl.NumberFormatOptions = {
+  ...CURRENCY_FORMAT,
+  maximumFractionDigits: 1,
+  minimumFractionDigits: 0,
+  notation: "compact",
+};
+const currencyFormatter = new Intl.NumberFormat(LOCALE_CONFIG.locale, CURRENCY_FORMAT);
+const compactCurrencyFormatter = new Intl.NumberFormat(
+  LOCALE_CONFIG.locale,
+  COMPACT_CURRENCY_FORMAT,
+);
+
 export const formatCurrency = (
   amount: number,
   options?: Intl.NumberFormatOptions,
 ) => {
+  if (!options) return currencyFormatter.format(amount);
   return new Intl.NumberFormat(LOCALE_CONFIG.locale, {
-    currency: LOCALE_CONFIG.currency,
-    style: LOCALE_CONFIG.style,
+    ...CURRENCY_FORMAT,
     ...options, // Allow overrides
   }).format(amount);
 };
 
-export const formatCurrencyCompact = (amount: number) => {
+export const formatCurrencyCompact = (
+  amount: number,
+  options?: Intl.NumberFormatOptions,
+) => {
+  if (!options) return compactCurrencyFormatter.format(amount);
   return new Intl.NumberFormat(LOCALE_CONFIG.locale, {
-    currency: LOCALE_CONFIG.currency,
-    maximumFractionDigits: 1,
-    minimumFractionDigits: 0,
-    notation: "compact",
-    style: LOCALE_CONFIG.style,
+    ...COMPACT_CURRENCY_FORMAT,
+    ...options,
   }).format(amount);
 };
 
