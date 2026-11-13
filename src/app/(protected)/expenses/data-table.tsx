@@ -37,6 +37,8 @@ interface DataTableProps<TData extends { id: string | number }, TValue> {
   isReadOnly?: boolean;
   goToLastPage?: boolean;
   isLoading?: boolean;
+  /** Inside another card: use a light border instead of a raised card. */
+  embedded?: boolean;
 }
 
 export function DataTable<TData extends { id: string | number }, TValue>({
@@ -47,6 +49,7 @@ export function DataTable<TData extends { id: string | number }, TValue>({
   isReadOnly = false,
   goToLastPage = false,
   isLoading = false,
+  embedded = false,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -106,33 +109,38 @@ export function DataTable<TData extends { id: string | number }, TValue>({
     <div className="space-y-4">
       {/* Search bar */}
       <div className="relative">
-        <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2" />
         <Input
-          placeholder="Search expenses…"
+          placeholder="Search by note, category, place or amount…"
           value={globalFilter}
           onChange={(e) => setGlobalFilter(e.target.value)}
-          className="h-9 pl-9 pr-9"
+          className="h-11 rounded-2xl pr-10 pl-11"
           aria-label="Search expenses"
         />
         {globalFilter && (
           <button
             type="button"
             onClick={() => setGlobalFilter("")}
-            className="text-muted-foreground hover:text-foreground absolute right-3 top-1/2 -translate-y-1/2"
+            className="text-muted-foreground hover:text-foreground absolute top-1/2 right-4 -translate-y-1/2"
             aria-label="Clear search"
           >
             <X className="h-4 w-4" />
           </button>
         )}
       </div>
-      <div className="overflow-hidden rounded-md border">
+      {globalFilter && (
+        <p className="text-muted-foreground -mt-1 px-1 text-xs" aria-live="polite">
+          {table.getFilteredRowModel().rows.length} of {data.length} match &ldquo;{globalFilter}&rdquo;
+        </p>
+      )}
+      <div className={embedded ? "overflow-hidden rounded-xl border" : "bg-card overflow-hidden rounded-2xl shadow-md"}>
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-muted/30">
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
+              <TableRow key={headerGroup.id} className="hover:bg-transparent">
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id}>
+                    <TableHead key={header.id} className="text-muted-foreground h-11 px-2 text-xs font-medium first:pl-5 last:pr-4">
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -161,9 +169,10 @@ export function DataTable<TData extends { id: string | number }, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
+                  className="hover:bg-muted/30 data-[state=selected]:bg-muted/50"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell key={cell.id} className="px-2 py-1.5 first:pl-5 last:pr-4">
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext(),
@@ -174,12 +183,18 @@ export function DataTable<TData extends { id: string | number }, TValue>({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="py-12">
-                  <div className="flex flex-col items-center gap-3 text-center">
-                    <ReceiptText className="text-muted-foreground/40 h-12 w-12" />
-                    <p className="font-medium">No expenses this month</p>
-                    <p className="text-muted-foreground text-sm">
-                      Add your first expense or import from CSV to get started
+                <TableCell colSpan={columns.length} className="py-14">
+                  <div className="flex flex-col items-center text-center">
+                    <span className="bg-muted text-muted-foreground ring-border mb-4 flex size-12 items-center justify-center rounded-xl ring-1">
+                      <ReceiptText className="size-5" aria-hidden />
+                    </span>
+                    <p className="text-base font-semibold">
+                      {globalFilter ? "No matching expenses" : "No expenses this month"}
+                    </p>
+                    <p className="text-muted-foreground mt-1.5 text-sm">
+                      {globalFilter
+                        ? "Try a different word, or clear the search."
+                        : "Use “Add expense” above, or import a bank statement."}
                     </p>
                   </div>
                 </TableCell>
@@ -188,7 +203,9 @@ export function DataTable<TData extends { id: string | number }, TValue>({
           </TableBody>
         </Table>
       </div>
-      <DataTablePagination table={table} showSelectionCount={!isReadOnly} />
+      {data.length > 0 && (
+        <DataTablePagination table={table} showSelectionCount={!isReadOnly} />
+      )}
     </div>
   );
 }

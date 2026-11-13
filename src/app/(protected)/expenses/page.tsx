@@ -1,15 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, Minus, Plus, Save } from "lucide-react";
+import { Loader2, Plus, Save, Trash2, Upload, X } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 
 import { BulkUpdate } from "@/components/expenses/BulkUpdate";
 import { DeleteExpenseDialog } from "@/components/expenses/DeleteExpenseDialog";
-import ExpenseHeader from "@/components/expenses/ExpenseHeader";
 import { ExpenseFormDialog } from "@/components/expenses/ExpenseFormDialog";
+import ExpenseHeader from "@/components/expenses/ExpenseHeader";
+import { ErrorState } from "@/components/shared/ErrorState";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { ExpensesPageSkeleton } from "@/components/shared/PageSkeletons";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { CreateExpenseInput, ExpenseWithDetails } from "@/entities/Expense";
 import { useExpenseMutations } from "@/hooks/expenses/useExpenseMutations";
 import { useExpenses } from "@/hooks/expenses/useExpenses";
@@ -135,6 +138,12 @@ const ExpensesPage = () => {
     }
   };
 
+  // ── Discard local edits ───────────────────────────────────────────────────
+  const handleDiscard = () => {
+    setLocalExpenses(fetchedData);
+    setHasUnsavedChanges(false);
+  };
+
   // ── Dialog: open create ────────────────────────────────────────────────────
   const handleOpenCreate = useCallback(() => {
     setEditTarget(undefined);
@@ -227,45 +236,49 @@ const ExpensesPage = () => {
 
   // ── Loading skeleton ───────────────────────────────────────────────────────
   if (isLoading) {
-    return (
-      <div className="mt-2 space-y-4">
-        <div className="bg-secondary mb-8 rounded-md px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Skeleton className="h-8 w-32" />
-              <Skeleton className="h-4 w-20" />
-            </div>
-            <div className="flex items-center gap-4">
-              <Skeleton className="h-8 w-28" />
-              <Skeleton className="h-8 w-28" />
-            </div>
-          </div>
-          <div className="my-8 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-28 rounded-lg" />
-            ))}
-          </div>
-        </div>
-        <Skeleton className="h-72 w-full rounded-md" />
-      </div>
-    );
+    return <ExpensesPageSkeleton />;
   }
+
+  const pageHeader = (
+    <PageHeader
+      title="Expenses"
+      description="Add, edit and review your spending one month at a time. Click any cell in the table to change it."
+      actions={
+        <>
+          <Button asChild variant="outline" size="sm" className="gap-1.5">
+            <Link href="/import-expenses">
+              <Upload className="size-3.5" />
+              Import
+            </Link>
+          </Button>
+          <Button size="sm" className="gap-1.5" onClick={handleOpenCreate}>
+            <Plus className="size-3.5" />
+            Add expense
+          </Button>
+        </>
+      }
+    />
+  );
 
   // ── Fetch error state ──────────────────────────────────────────────────────
   if (fetchError) {
     return (
-      <div className="mt-8 flex flex-col items-center gap-3 text-center">
-        <p className="text-destructive font-medium">Failed to load expenses</p>
-        <p className="text-muted-foreground text-sm">
-          {fetchError instanceof Error ? fetchError.message : "Unknown error"}
-        </p>
+      <div className="space-y-6">
+        {pageHeader}
+        <ErrorState
+          title="Expenses could not be loaded"
+          message={fetchError instanceof Error ? fetchError.message : "Unknown error"}
+          onRetry={() => window.location.reload()}
+        />
       </div>
     );
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="mt-2">
+    <div className="space-y-6">
+      {pageHeader}
+
       <ExpenseHeader
         currentMonth={currentMonth}
         currentYear={currentYear}
@@ -275,84 +288,67 @@ const ExpensesPage = () => {
         total={total}
       />
 
-      {/* Bulk Update strip */}
+      {/* Selection bar: bulk edit + delete for the ticked rows */}
       {selectedIds.length > 0 && (
-        <div className="mb-4">
-          <BulkUpdate
-            onApplyBulkUpdate={handleBulkUpdate}
-            selectedCount={selectedIds.length}
-          />
-        </div>
-      )}
-
-      {/* Unsaved changes banner */}
-      {hasUnsavedChanges && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3">
-          <div className="flex-1">
-            <p className="text-sm font-medium text-yellow-600 dark:text-yellow-500">
-              You have unsaved changes
-            </p>
-            <p className="text-muted-foreground text-xs">
-              {'Click "Save Changes" to persist your edits'}
-            </p>
-          </div>
-          <Button size="sm" onClick={handleSaveAll} disabled={isSaving} className="gap-2">
-            {isSaving ? (
-              <><Loader2 className="h-4 w-4 animate-spin" />Saving…</>
+        <BulkUpdate onApplyBulkUpdate={handleBulkUpdate} selectedCount={selectedIds.length}>
+          <Button
+            disabled={isDeleting}
+            className="gap-1.5"
+            onClick={handleBulkDelete}
+            size="sm"
+            variant="ghost"
+          >
+            {isDeleting ? (
+              <><Loader2 className="size-3.5 animate-spin" />Deleting…</>
             ) : (
-              <><Save className="h-4 w-4" />Save Changes</>
+              <><Trash2 className="size-3.5" />Delete {selectedIds.length}</>
             )}
           </Button>
-        </div>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="size-8"
+            onClick={() => setRowSelection({})}
+            aria-label="Clear selection"
+          >
+            <X className="size-4" />
+          </Button>
+        </BulkUpdate>
       )}
 
       {/* Table */}
-      <div className="mb-2">
-        <DataTable
-          columns={columns}
-          data={localExpenses}
-          goToLastPage={goToLastPage}
-          isLoading={isLoading}
-          onRowSelectionChange={setRowSelection}
-          rowSelection={rowSelection}
-        />
-      </div>
+      <DataTable
+        columns={columns}
+        data={localExpenses}
+        goToLastPage={goToLastPage}
+        isLoading={isLoading}
+        onRowSelectionChange={setRowSelection}
+        rowSelection={rowSelection}
+      />
 
-      {/* Bottom action bar */}
-      <div className="flex items-center justify-end gap-2 border-t p-4">
-        {selectedIds.length > 0 && (
-          <Button
-            disabled={isDeleting}
-            className="gap-2"
-            onClick={handleBulkDelete}
-            size="sm"
-            variant="destructive"
-          >
-            {isDeleting ? (
-              <><Loader2 className="h-4 w-4 animate-spin" />Deleting…</>
+      {/* Floating save bar — only while there are unsaved edits */}
+      {hasUnsavedChanges && (
+        <div
+          role="status"
+          className="bg-popover sticky bottom-4 z-20 mx-auto flex w-full max-w-xl flex-wrap items-center gap-3 rounded-2xl border py-2.5 pr-2.5 pl-4 shadow-[0_16px_40px_-8px_rgb(0_0_0/0.5)] dark:border-white/15"
+        >
+          <span aria-hidden className="bg-warning size-2 shrink-0 rounded-full" />
+          <p className="min-w-0 flex-1 text-sm">
+            <span className="font-medium">Unsaved changes</span>
+            <span className="text-muted-foreground hidden sm:inline"> · save to keep your edits</span>
+          </p>
+          <Button size="sm" variant="ghost" onClick={handleDiscard} disabled={isSaving}>
+            Discard
+          </Button>
+          <Button size="sm" className="gap-1.5" onClick={handleSaveAll} disabled={isSaving}>
+            {isSaving ? (
+              <><Loader2 className="size-3.5 animate-spin" />Saving…</>
             ) : (
-              <><Minus className="h-4 w-4" />Delete {selectedIds.length}</>
+              <><Save className="size-3.5" />Save changes</>
             )}
           </Button>
-        )}
-        <Button
-          className="cursor-pointer gap-2"
-          disabled={!hasUnsavedChanges || isSaving}
-          onClick={handleSaveAll}
-          size="sm"
-          variant="default"
-        >
-          {isSaving ? (
-            <><Loader2 className="h-4 w-4 animate-spin" />Saving…</>
-          ) : (
-            <><Save className="h-4 w-4" />Save</>
-          )}
-        </Button>
-        <Button className="cursor-pointer gap-2" onClick={handleOpenCreate} size="sm">
-          <Plus className="h-4 w-4" />
-          Add Expense
-        </Button>
-      </div>
+        </div>
+      )}
 
       {/* Create / Edit dialog */}
       <ExpenseFormDialog

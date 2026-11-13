@@ -20,6 +20,10 @@ import { parseLocalDate } from "@/lib/dateUtils";
 import { DataTableColumnHeader } from "./column-header";
 import { RowActions } from "./row-actions";
 
+/** YYYY-MM-DD in local time (toISOString() is UTC and can shift the day). */
+const toLocalISODate = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
 interface CreateColumnsProps {
   members: Member[];
   categories: Category[];
@@ -34,6 +38,13 @@ interface CreateColumnsProps {
   onDelete: (expense: ExpenseWithDetails) => void;
 }
 
+// Inline-edit controls look like plain text until hovered or focused, so the
+// table reads cleanly but every cell can still be edited in place.
+const GHOST_INPUT =
+  "h-8 rounded-lg border border-transparent bg-transparent px-2 text-sm shadow-none dark:bg-transparent hover:border-input hover:bg-muted/40 focus-visible:border-ring focus-visible:bg-background";
+const GHOST_SELECT =
+  "h-8 w-32 rounded-lg border-transparent bg-transparent px-2 shadow-none dark:bg-transparent dark:hover:bg-muted/40 hover:border-input hover:bg-muted/40 [&_svg]:opacity-0 hover:[&_svg]:opacity-60 focus-visible:[&_svg]:opacity-60 data-[state=open]:[&_svg]:opacity-60";
+
 // Create a separate component for editable cells to maintain local state
 const EditableAmountCell = ({
   expense,
@@ -46,19 +57,20 @@ const EditableAmountCell = ({
     value: ExpenseWithDetails[keyof ExpenseWithDetails],
   ) => void;
 }) => {
-  const [value, setValue] = useState(expense.amount.toString());
+  const [value, setValue] = useState(expense.amount.toFixed(2));
 
   useEffect(() => {
-    setValue(expense.amount.toString());
+    setValue(expense.amount.toFixed(2));
   }, [expense.amount]);
 
   const handleBlur = () => {
     const numValue = parseFloat(value);
     if (!isNaN(numValue) && numValue !== expense.amount) {
       onUpdate(expense.id, "amount", numValue);
+      setValue(numValue.toFixed(2));
     } else {
       // Reset to original value if invalid
-      setValue(expense.amount.toString());
+      setValue(expense.amount.toFixed(2));
     }
   };
 
@@ -73,19 +85,23 @@ const EditableAmountCell = ({
   };
 
   return (
-    <>
-      <span className="text-muted-foreground mr-1">{LOCALE_CONFIG.symbol}</span>
+    <div className="relative w-28">
+      <span className="text-muted-foreground pointer-events-none absolute top-1/2 left-2 -translate-y-1/2 text-sm">
+        {LOCALE_CONFIG.symbol}
+      </span>
       <Input
         type="number"
+        inputMode="decimal"
+        aria-label="Amount"
         value={value}
         onChange={handleChange}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
-        className="h-8 w-24"
+        className={`${GHOST_INPUT} [appearance:textfield] pl-5 font-medium tabular-nums [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
         step="0.01"
         min="0"
       />
-    </>
+    </div>
   );
 };
 
@@ -128,8 +144,9 @@ const EditableDescriptionCell = ({
       onChange={handleChange}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
-      className="h-8"
-      placeholder="Add description..."
+      aria-label="Description"
+      className={`${GHOST_INPUT} min-w-40 font-medium`}
+      placeholder="Add a note…"
     />
   );
 };
@@ -167,23 +184,21 @@ export const createColumns = ({
     },
     {
       accessorKey: "id",
-      cell: ({ row }) => row.index + 1,
+      cell: ({ row }) => (
+        <span className="text-muted-foreground text-xs tabular-nums">{row.index + 1}</span>
+      ),
       header: "#",
     },
     {
       accessorKey: "date",
       cell: ({ row }) => {
         const [dateValue, setDateValue] = useState(
-          parseLocalDate(row.original.date as unknown as string)
-            .toISOString()
-            .split("T")[0],
+          toLocalISODate(parseLocalDate(row.original.date as unknown as string)),
         );
 
         useEffect(() => {
           setDateValue(
-            parseLocalDate(row.original.date as unknown as string)
-              .toISOString()
-              .split("T")[0],
+            toLocalISODate(parseLocalDate(row.original.date as unknown as string)),
           );
         }, [row.original.date]);
 
@@ -196,7 +211,8 @@ export const createColumns = ({
               onUpdate(row.original.id, "date", new Date(e.target.value));
             }}
             onFocus={(e) => e.target.showPicker?.()}
-            className="hover:bg-accent focus:ring-ring h-8 w-42 border bg-transparent focus:ring-1"
+            aria-label="Date"
+            className={`${GHOST_INPUT} text-muted-foreground w-[8.5rem] tabular-nums [color-scheme:light] dark:[color-scheme:dark]`}
           />
         );
       },
@@ -241,7 +257,9 @@ export const createColumns = ({
               );
             }}
           >
-            <SelectTrigger className="hover:bg-accent focus:ring-ring h-8 w-32 border bg-transparent focus:ring-1">
+            <SelectTrigger
+              className={`${GHOST_SELECT} ${value === "none" ? "text-muted-foreground/70" : ""}`}
+            >
               <SelectValue placeholder="Select..." />
             </SelectTrigger>
             <SelectContent>
@@ -279,7 +297,9 @@ export const createColumns = ({
               );
             }}
           >
-            <SelectTrigger className="hover:bg-accent focus:ring-ring h-8 w-32 border bg-transparent focus:ring-1">
+            <SelectTrigger
+              className={`${GHOST_SELECT} ${value === "none" ? "text-muted-foreground/70" : ""}`}
+            >
               <SelectValue placeholder="Select..." />
             </SelectTrigger>
             <SelectContent>
@@ -317,7 +337,9 @@ export const createColumns = ({
               );
             }}
           >
-            <SelectTrigger className="hover:bg-accent focus:ring-ring h-8 w-32 border bg-transparent focus:ring-1">
+            <SelectTrigger
+              className={`${GHOST_SELECT} ${value === "none" ? "text-muted-foreground/70" : ""}`}
+            >
               <SelectValue placeholder="Select..." />
             </SelectTrigger>
             <SelectContent>

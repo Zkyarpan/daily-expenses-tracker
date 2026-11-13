@@ -1,26 +1,36 @@
-// Create this component if you want sortable headers
 import { Column } from "@tanstack/react-table";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface DataTableColumnHeaderProps<TData, TValue> {
   column: Column<TData, TValue>;
   title: string;
+  className?: string;
 }
 
+/** Sortable column title. The arrow shows the current sort direction. */
 export function DataTableColumnHeader<TData, TValue>({
   column,
   title,
+  className,
 }: DataTableColumnHeaderProps<TData, TValue>) {
+  const sorted = column.getIsSorted();
+  const Icon = sorted === "asc" ? ArrowUp : sorted === "desc" ? ArrowDown : ChevronsUpDown;
+
   return (
-    <Button
-      variant="ghost"
-      onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      className="p-0 h-auto font-semibold hover:bg-transparent"
+    <button
+      type="button"
+      onClick={() => column.toggleSorting(sorted === "asc")}
+      className={cn(
+        "hover:text-foreground -ml-2 inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium whitespace-nowrap transition-colors",
+        sorted ? "text-foreground" : "text-muted-foreground",
+        className,
+      )}
+      aria-label={`Sort by ${title}${sorted ? (sorted === "asc" ? ", ascending" : ", descending") : ""}`}
     >
       {title}
-      <ArrowUpDown className="ml-2 h-4 w-4" />
-    </Button>
+      <Icon className={cn("size-3.5", !sorted && "opacity-50")} aria-hidden />
+    </button>
   );
 }

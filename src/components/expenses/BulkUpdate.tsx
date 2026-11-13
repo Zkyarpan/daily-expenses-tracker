@@ -26,6 +26,8 @@ interface BulkUpdateProps {
     field: keyof ExpenseWithDetails,
     value: ExpenseWithDetails[keyof ExpenseWithDetails],
   ) => void;
+  /** Extra actions shown at the end of the bar (e.g. delete, clear). */
+  children?: React.ReactNode;
 }
 
 // Define which fields can be bulk updated and their input types
@@ -54,6 +56,7 @@ const BULK_UPDATE_FIELDS: Array<{
 export const BulkUpdate = ({
   selectedCount,
   onApplyBulkUpdate,
+  children,
 }: BulkUpdateProps) => {
   const [selectedField, setSelectedField] = useState<BulkUpdateField | "">("");
   const [fieldValue, setFieldValue] = useState<string>("");
@@ -168,12 +171,16 @@ export const BulkUpdate = ({
   if (selectedCount === 0) return null;
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-blue-500/30 bg-blue-500/10 p-3">
-      <div className="text-sm font-medium text-blue-600 dark:text-blue-500">
+    <div
+      role="region"
+      aria-label="Selected expenses"
+      className="bg-popover flex flex-wrap items-center gap-2 rounded-2xl border p-2 pl-4 shadow-md dark:border-white/15"
+    >
+      <div className="text-sm font-semibold tabular-nums">
         {selectedCount} selected
       </div>
 
-      <div className="h-4 w-px bg-blue-500/30" />
+      <div className="bg-border mx-1 h-5 w-px" aria-hidden />
 
       <Select
         value={selectedField}
@@ -182,8 +189,8 @@ export const BulkUpdate = ({
           setFieldValue("");
         }}
       >
-        <SelectTrigger className="h-9 w-48 border-blue-500/30 bg-white dark:bg-gray-950">
-          <SelectValue placeholder="Select field to update..." />
+        <SelectTrigger className="h-9 w-48">
+          <SelectValue placeholder="Change a field…" />
         </SelectTrigger>
         <SelectContent>
           {BULK_UPDATE_FIELDS.map((field) => (
@@ -202,13 +209,15 @@ export const BulkUpdate = ({
             size="sm"
             onClick={handleApply}
             disabled={!fieldValue}
-            className="gap-2"
+            className="gap-1.5"
           >
-            <Check className="h-4 w-4" />
-            Apply to Selected
+            <Check className="size-3.5" />
+            Apply
           </Button>
         </>
       )}
+
+      {children && <div className="ml-auto flex items-center gap-1">{children}</div>}
     </div>
   );
 };

@@ -1,26 +1,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import dynamic from "next/dynamic";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, CircleHelp, Layers, Receipt, TrendingUp, Wallet } from "lucide-react";
 
+import { Money } from "@/components/shared/Money";
+import { StatCard } from "@/components/shared/StatCard";
 import { ExpenseWithDetails } from "@/entities/Expense";
-import { DEFAULT_MEMBERS, LOCALE_CONFIG } from "@/lib/config";
+import { CATEGORY_ICONS_BY_NAME, CHART_PALETTE, DEFAULT_MEMBERS } from "@/lib/config";
+import { cn, formatCurrency, getCategoryColor } from "@/lib/utils";
 
-import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
-import { Card, CardContent } from "../ui/card";
-import { NumberTicker } from "../ui/number-ticker";
-
-import CategoryCard from "./CategoryCard";
 import MonthYearSelector from "./MonthYearSelector";
 
-// Lazy-load MemberCard: it imports recharts (PieChart) which adds ~800 modules.
-// With dynamic(), recharts is only fetched when the charts panel is visible.
-const MemberCard = dynamic(() => import("./MemberCard"), {
-  loading: () => <div className="bg-muted h-28 animate-pulse rounded-lg" />,
-  ssr: false,
-});
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
 
 interface ExpenseHeaderProps {
   data: ExpenseWithDetails[];
@@ -31,6 +25,64 @@ interface ExpenseHeaderProps {
   onMonthYearChange: (month: number, year: number) => void;
 }
 
+interface BreakdownRow {
+  amount: number;
+  color: string;
+  count: number;
+  icon?: React.ElementType;
+  name: string;
+}
+
+function BreakdownList({ rows, title, total }: { rows: BreakdownRow[]; title: string; total: number }) {
+  const max = Math.max(...rows.map((r) => r.amount), 0);
+
+  return (
+    <div className="min-w-0">
+      <h3 className="text-muted-foreground mb-3 text-xs font-medium">{title}</h3>
+      <ul className="space-y-3.5">
+        {rows.map((row) => {
+          const Icon = row.icon;
+          const share = total > 0 ? Math.round((row.amount / total) * 100) : 0;
+          return (
+            <li key={row.name} className="space-y-1.5">
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <span className="flex min-w-0 items-center gap-2">
+                  {Icon ? (
+                    <Icon className="text-muted-foreground size-3.5 shrink-0" aria-hidden />
+                  ) : (
+                    <span
+                      aria-hidden
+                      className="size-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: row.color }}
+                    />
+                  )}
+                  <span className="truncate font-medium">{row.name}</span>
+                  <span className="text-muted-foreground shrink-0 text-xs">
+                    {row.count} {row.count === 1 ? "item" : "items"}
+                  </span>
+                </span>
+                <span className="flex shrink-0 items-baseline gap-2 tabular-nums">
+                  <span className="text-muted-foreground text-xs">{share}%</span>
+                  <Money amount={row.amount} className="font-semibold" />
+                </span>
+              </div>
+              <div className="bg-muted h-1.5 overflow-hidden rounded-full" aria-hidden>
+                <div
+                  className="h-full rounded-full transition-[width] duration-500"
+                  style={{
+                    backgroundColor: row.color,
+                    width: `${max > 0 ? (row.amount / max) * 100 : 0}%`,
+                  }}
+                />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 const ExpenseHeader = ({
   data,
   total,
@@ -39,168 +91,127 @@ const ExpenseHeader = ({
   currentYear,
   onMonthYearChange,
 }: ExpenseHeaderProps) => {
-  const [showCharts, setShowCharts] = useState(true);
+  const [showBreakdown, setShowBreakdown] = useState(true);
 
-  // Calculate totals per category
-  const categoryTotals = useMemo(() => {
-    const totals: Record<
-      string,
-      { name: string; amount: number; count: number }
-    > = {};
-
+  const categoryRows = useMemo<BreakdownRow[]>(() => {
+    const totals = new Map<string, { amount: number; count: number }>();
     data.forEach((expense) => {
-      const categoryName = expense.categoryName || "Uncategorized";
-      if (!totals[categoryName]) {
-        totals[categoryName] = { amount: 0, count: 0, name: categoryName };
-      }
-      totals[categoryName].amount += expense.amount;
-      totals[categoryName].count += 1;
+      const name = expense.categoryName || "Uncategorized";
+      const t = totals.get(name) ?? { amount: 0, count: 0 };
+      t.amount += expense.amount;
+      t.count += 1;
+      totals.set(name, t);
     });
-
-    return Object.values(totals).sort((a, b) => b.amount - a.amount);
-  }, [data]);
-
-  // Calculate totals per member
-  const memberTotals = useMemo(() => {
-    const totals: Record<
-      string,
-      { id: string; name: string; amount: number; count: number }
-    > = {};
-
-    // Initialize all members with 0
-    DEFAULT_MEMBERS.forEach((member) => {
-      totals[member.id] = {
-        amount: 0,
-        count: 0,
-        id: member.id,
-        name: member.name,
-      };
-    });
-
-    // Add "Unassigned" for expenses without a member
-    totals["unassigned"] = {
-      amount: 0,
-      count: 0,
-      id: "unassigned",
-      name: "Unassigned",
-    };
-
-    // Calculate actual totals
-    data.forEach((expense) => {
-      const memberId = expense.memberId || "unassigned";
-      if (!totals[memberId]) {
-        const member = DEFAULT_MEMBERS.find((m) => m.id === memberId);
-        totals[memberId] = {
-          amount: 0,
-          count: 0,
-          id: memberId,
-          name: member?.name || "Unknown",
-        };
-      }
-      totals[memberId].amount += expense.amount;
-      totals[memberId].count += 1;
-    });
-
-    return Object.values(totals)
-      .filter((member) => member.amount > 0)
+    return [...totals.entries()]
+      .map(([name, t]) => ({
+        ...t,
+        color: name === "Uncategorized" ? "var(--muted-foreground)" : getCategoryColor(name),
+        icon: CATEGORY_ICONS_BY_NAME[name] ?? CircleHelp,
+        name,
+      }))
       .sort((a, b) => b.amount - a.amount);
   }, [data]);
 
-  // Calculate max amount for relative bar sizing
-  const maxAmount = useMemo(
-    () => Math.max(...categoryTotals.map((c) => c.amount), 0),
-    [categoryTotals],
+  const memberRows = useMemo<BreakdownRow[]>(() => {
+    const totals = new Map<string, { amount: number; count: number; name: string }>();
+    data.forEach((expense) => {
+      const id = expense.memberId || "unassigned";
+      const name =
+        id === "unassigned"
+          ? "Not assigned"
+          : (DEFAULT_MEMBERS.find((m) => m.id === id)?.name ?? expense.memberName ?? "Unknown");
+      const t = totals.get(id) ?? { amount: 0, count: 0, name };
+      t.amount += expense.amount;
+      t.count += 1;
+      totals.set(id, t);
+    });
+    return [...totals.entries()]
+      .sort((a, b) => b[1].amount - a[1].amount)
+      .map(([id, t], i) => ({
+        ...t,
+        color: id === "unassigned" ? "var(--muted-foreground)" : CHART_PALETTE[i % CHART_PALETTE.length],
+      }));
+  }, [data]);
+
+  const largest = useMemo(
+    () => data.reduce<ExpenseWithDetails | null>((max, e) => (!max || e.amount > max.amount ? e : max), null),
+    [data],
   );
 
+  const top = categoryRows[0];
+  const prevMonthName = MONTHS[(currentMonth + 11) % 12];
+  const hasData = data.length > 0;
+
   return (
-    <div className="flex w-full flex-col">
-      {/* Header Section */}
-      <div className="bg-secondary mb-8 rounded-md px-4 py-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <MonthYearSelector
-              currentMonth={currentMonth}
-              currentYear={currentYear}
-              onMonthYearChange={onMonthYearChange}
+    <section aria-label="Month summary" className="space-y-4">
+      {/* Month picker */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <MonthYearSelector
+          currentMonth={currentMonth}
+          currentYear={currentYear}
+          onMonthYearChange={onMonthYearChange}
+        />
+        {hasData && (
+          <button
+            type="button"
+            onClick={() => setShowBreakdown((v) => !v)}
+            aria-expanded={showBreakdown}
+            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-sm font-medium transition-colors"
+          >
+            {showBreakdown ? "Hide breakdown" : "Show breakdown"}
+            <ChevronDown
+              className={cn("size-4 transition-transform", showBreakdown && "rotate-180")}
+              aria-hidden
             />
-            <div>
-              <p className="text-muted-foreground text-sm">
-                {data.length} {data.length === 1 ? "expense" : "expenses"}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-right">
-              <p className="text-muted-foreground text-sm">Total</p>
-              <p className="text-2xl font-bold">
-                <span>{LOCALE_CONFIG.symbol}</span>
-                <NumberTicker value={total} decimalPlaces={2} />
-              </p>
-              {deltaPercent != null && (
-                <Badge
-                  variant="secondary"
-                  className={
-                    deltaPercent >= 0
-                      ? "text-red-600 dark:text-red-400"
-                      : "text-green-600 dark:text-green-400"
-                  }
-                  title="vs last month"
-                >
-                  {deltaPercent >= 0 ? "↑" : "↓"}{" "}
-                  {Math.abs(deltaPercent).toFixed(1)}%
-                </Badge>
-              )}
-            </div>
-            <Button
-              onClick={() => setShowCharts(!showCharts)}
-              size="sm"
-              variant="outline"
-              className="w-[8vw] gap-2"
-            >
-              {showCharts ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
-              )}
-              {showCharts ? "Hide" : "Show"} Charts
-            </Button>
-          </div>
-        </div>
-        {/* Charts Grid */}
-        {showCharts && (
-          <div className="my-8">
-            {categoryTotals.length > 0 || memberTotals.length > 0 ? (
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-                {/* Category Cards */}
-                {categoryTotals.map((category) => {
-                  const percentage =
-                    maxAmount > 0 ? (category.amount / maxAmount) * 100 : 0;
-
-                  return (
-                    <CategoryCard
-                      key={category.name}
-                      categoryName={category.name}
-                      amount={category.amount}
-                      count={category.count}
-                      percentage={percentage}
-                    />
-                  );
-                })}
-
-                {/* Member Pie Chart */}
-                <MemberCard memberTotals={memberTotals} />
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="text-muted-foreground py-8 text-center">
-                  No expenses yet. Add your first expense to see breakdowns!
-                </CardContent>
-              </Card>
-            )}
-          </div>
+          </button>
         )}
       </div>
-    </div>
+
+      {/* Summary tiles */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+        <StatCard
+          label={`Spent in ${MONTHS[currentMonth]}`}
+          icon={Wallet}
+          value={<Money amount={total} />}
+          delta={
+            deltaPercent != null
+              ? { goodDirection: "down", label: `vs ${prevMonthName}`, value: deltaPercent }
+              : undefined
+          }
+          hint={deltaPercent == null ? `No ${prevMonthName} spending to compare` : undefined}
+        />
+        <StatCard
+          label="Expenses"
+          icon={Receipt}
+          value={data.length.toLocaleString()}
+          hint={hasData ? `Average ${formatCurrency(total / data.length)} each` : "Nothing recorded yet"}
+        />
+        <StatCard
+          label="Top category"
+          icon={Layers}
+          value={top?.name ?? "—"}
+          hint={
+            top
+              ? `${formatCurrency(top.amount)} · ${Math.round((top.amount / Math.max(total, 0.01)) * 100)}% of spending`
+              : "No categories yet"
+          }
+        />
+        <StatCard
+          label="Largest expense"
+          icon={TrendingUp}
+          value={largest ? <Money amount={largest.amount} /> : "—"}
+          hint={largest ? largest.description || "No description" : "Nothing recorded yet"}
+        />
+      </div>
+
+      {/* Breakdown */}
+      {hasData && showBreakdown && (
+        <div className="bg-card grid gap-8 rounded-2xl p-5 shadow-md sm:p-6 lg:grid-cols-2">
+          <BreakdownList title="By category" rows={categoryRows} total={total} />
+          <BreakdownList title="Paid by" rows={memberRows} total={total} />
+        </div>
+      )}
+    </section>
   );
 };
 

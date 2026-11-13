@@ -16,8 +16,8 @@
  *    Supabase RLS INSERT policy (auth.uid()) on the server side.
  */
 
-import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { useState } from "react";
+import { CircleHelp, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -38,16 +38,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { CreateExpenseInput, ExpenseWithDetails } from "@/entities/Expense";
+import {
+  CATEGORY_ICONS_BY_NAME,
+  DEFAULT_CATEGORIES,
+  DEFAULT_TAGS,
+  LOCALE_CONFIG,
+} from "@/lib/config";
 import {
   assertValidCreateInput,
   validateAmount,
   validateDate,
   validateDescription,
 } from "@/lib/expenseValidation";
-import { DEFAULT_CATEGORIES, DEFAULT_MEMBERS, DEFAULT_TAGS, LOCALE_CONFIG } from "@/lib/config";
-import { getErrorMessage } from "@/lib/utils";
+import { cn, formatCurrency, getErrorMessage } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -67,67 +71,80 @@ interface ExpenseFormDialogProps {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function todayISO(year: number, month: number): string {
-  // Default to the first day of the selected month/year
-  const d = new Date(year, month, 1);
-  return d.toISOString().split("T")[0];
+/** YYYY-MM-DD in local time (toISOString() converts to UTC and can shift the day). */
+function toISODate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
+
+/** Today when the page shows the current month, otherwise the 1st of that month. */
+function defaultDateFor(year: number, month: number): string {
+  const now = new Date();
+  if (now.getFullYear() === year && now.getMonth() === month)
+    return toISODate(now);
+  return toISODate(new Date(year, month, 1));
+}
+
+const daysAgo = (n: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return toISODate(d);
+};
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function ExpenseFormDialog({
-  open,
+type ExpenseFormProps = Omit<ExpenseFormDialogProps, "open">;
+
+function initialDate(
+  initialValues: ExpenseWithDetails | undefined,
+  year: number,
+  month: number,
+) {
+  if (!initialValues) return defaultDateFor(year, month);
+  return initialValues.date instanceof Date
+    ? toISODate(initialValues.date)
+    : String(initialValues.date).split("T")[0];
+}
+
+/**
+ * The form body. It mounts each time the dialog opens (Radix unmounts closed
+ * content), so state starts from the right values without a reset effect.
+ */
+function ExpenseForm({
   mode,
   initialValues,
   defaultYear,
   defaultMonth,
   onClose,
   onSave,
-}: ExpenseFormDialogProps) {
-  const isEdit = mode === "edit";
+}: ExpenseFormProps) {
+  const isEdit = mode === "edit" && !!initialValues;
 
   // ── Form state ──────────────────────────────────────────────────────────────
-  const [amount, setAmount] = useState("");
-  const [description, setDescription] = useState("");
-  const [categoryId, setCategoryId] = useState<string>("none");
-  const [tagId, setTagId] = useState<string>("none");
-  const [memberId, setMemberId] = useState<string>("none");
-  const [date, setDate] = useState<string>("");
+  const [amount, setAmount] = useState(() =>
+    isEdit ? Math.abs(initialValues.amount).toString() : "",
+  );
+  const [description, setDescription] = useState(() =>
+    isEdit ? (initialValues.description ?? "") : "",
+  );
+  // New expenses default to Grocery, the most common category.
+  const [categoryId, setCategoryId] = useState<string>(() =>
+    isEdit ? (initialValues.categoryId ?? "none") : "1",
+  );
+  const [tagId, setTagId] = useState<string>(() =>
+    isEdit ? (initialValues.tagId ?? "none") : "none",
+  );
+  const [date, setDate] = useState<string>(() =>
+    initialDate(isEdit ? initialValues : undefined, defaultYear, defaultMonth),
+  );
   const [saving, setSaving] = useState(false);
 
   // ── Field-level errors ──────────────────────────────────────────────────────
   const [amountError, setAmountError] = useState<string | undefined>();
   const [dateError, setDateError] = useState<string | undefined>();
   const [descError, setDescError] = useState<string | undefined>();
-
-  // ── Populate when editing ───────────────────────────────────────────────────
-  useEffect(() => {
-    if (!open) return;
-
-    if (isEdit && initialValues) {
-      setAmount(Math.abs(initialValues.amount).toString());
-      setDescription(initialValues.description ?? "");
-      setCategoryId(initialValues.categoryId ?? "none");
-      setTagId(initialValues.tagId ?? "none");
-      setMemberId(initialValues.memberId ?? "none");
-      const d = initialValues.date instanceof Date
-        ? initialValues.date.toISOString().split("T")[0]
-        : String(initialValues.date).split("T")[0];
-      setDate(d);
-    } else {
-      // Reset for create mode
-      setAmount("");
-      setDescription("");
-      setCategoryId("1"); // default to Grocery
-      setTagId("none");
-      setMemberId("none");
-      setDate(todayISO(defaultYear, defaultMonth));
-    }
-
-    setAmountError(undefined);
-    setDateError(undefined);
-    setDescError(undefined);
-  }, [open, isEdit, initialValues, defaultYear, defaultMonth]);
 
   // ── Inline validation ───────────────────────────────────────────────────────
   const validateFields = (): boolean => {
@@ -179,97 +196,181 @@ export function ExpenseFormDialog({
       onClose();
     } catch (err) {
       const msg = getErrorMessage(err);
-      toast.error(isEdit ? "Failed to update expense" : "Failed to add expense", {
-        description: msg,
-      });
+      toast.error(
+        isEdit ? "Failed to update expense" : "Failed to add expense",
+        {
+          description: msg,
+        },
+      );
     } finally {
       setSaving(false);
     }
   };
 
   // ── Render ──────────────────────────────────────────────────────────────────
-  return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="sm:max-w-[440px]">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit Expense" : "Add Expense"}</DialogTitle>
-          <DialogDescription>
-            {isEdit
-              ? "Update the expense details below."
-              : "Fill in the details for your new expense."}
-          </DialogDescription>
-        </DialogHeader>
+  const today = daysAgo(0);
+  const yesterday = daysAgo(1);
+  const parsedAmount = parseFloat(amount);
 
-        <form onSubmit={handleSubmit} noValidate className="space-y-4 py-2">
+  return (
+    <>
+      <DialogHeader className="border-b px-6 pt-6 pb-4 text-left">
+        <DialogTitle className="text-lg font-semibold tracking-tight">
+          {isEdit ? "Edit expense" : "Add expense"}
+        </DialogTitle>
+        <DialogDescription>
+          {isEdit
+            ? "Change anything below, then save."
+            : "Amount and date are all you need. The rest is optional."}
+        </DialogDescription>
+      </DialogHeader>
+
+      <form
+        onSubmit={handleSubmit}
+        noValidate
+        className="flex min-h-0 flex-1 flex-col"
+      >
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
           {/* Amount */}
-          <div className="space-y-1.5">
-            <Label htmlFor="exp-amount">
-              Amount <span className="text-destructive">*</span>
-            </Label>
+          <div className="space-y-2">
+            <Label htmlFor="exp-amount">How much?</Label>
             <div className="relative">
-              <span className="text-muted-foreground pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm">
+              <span className="text-muted-foreground pointer-events-none absolute inset-y-0 left-4 flex items-center text-xl font-medium">
                 {LOCALE_CONFIG.symbol}
               </span>
               <Input
                 id="exp-amount"
                 type="number"
+                inputMode="decimal"
                 step="0.01"
                 min="0.01"
                 placeholder="0.00"
+                autoFocus={!isEdit}
                 value={amount}
+                aria-invalid={!!amountError}
+                aria-describedby={amountError ? "exp-amount-error" : undefined}
                 onChange={(e) => {
                   setAmount(e.target.value);
                   setAmountError(undefined);
                 }}
                 onBlur={() => {
+                  if (!amount) return;
                   const v = parseFloat(amount);
                   setAmountError(validateAmount(isNaN(v) ? NaN : v));
                 }}
-                className={`pl-7 ${amountError ? "border-destructive" : ""}`}
+                className="h-14 [appearance:textfield] pl-9 text-2xl font-semibold tabular-nums md:text-2xl [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 disabled={saving}
               />
             </div>
             {amountError && (
-              <p className="text-destructive text-xs">{amountError}</p>
+              <p id="exp-amount-error" className="text-destructive text-xs">
+                {amountError}
+              </p>
             )}
           </div>
 
           {/* Date */}
-          <div className="space-y-1.5">
-            <Label htmlFor="exp-date">
-              Date <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="exp-date"
-              type="date"
-              value={date}
-              onChange={(e) => {
-                setDate(e.target.value);
-                setDateError(undefined);
-              }}
-              onBlur={() => setDateError(validateDate(date))}
-              className={dateError ? "border-destructive" : ""}
-              disabled={saving}
-            />
+          <div className="space-y-2">
+            <Label htmlFor="exp-date">When?</Label>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { label: "Today", value: today },
+                { label: "Yesterday", value: yesterday },
+              ].map((opt) => (
+                <Button
+                  key={opt.label}
+                  type="button"
+                  size="sm"
+                  variant={date === opt.value ? "default" : "secondary"}
+                  aria-pressed={date === opt.value}
+                  className="h-10 rounded-xl px-4"
+                  onClick={() => {
+                    setDate(opt.value);
+                    setDateError(undefined);
+                  }}
+                  disabled={saving}
+                >
+                  {opt.label}
+                </Button>
+              ))}
+              <div className="relative min-w-[150px] flex-1">
+                <Input
+                  id="exp-date"
+                  type="date"
+                  value={date}
+                  aria-invalid={!!dateError}
+                  onChange={(e) => {
+                    setDate(e.target.value);
+                    setDateError(undefined);
+                  }}
+                  onBlur={() => setDateError(validateDate(date))}
+                  className="[color-scheme:light] dark:[color-scheme:dark]"
+                  disabled={saving}
+                />
+              </div>
+            </div>
             {dateError && (
               <p className="text-destructive text-xs">{dateError}</p>
             )}
           </div>
 
+          {/* Category */}
+          <fieldset className="space-y-2">
+            <legend className="mb-2 text-sm leading-none font-medium">
+              Category
+            </legend>
+            <div
+              className="grid grid-cols-3 gap-2"
+              role="radiogroup"
+              aria-label="Category"
+            >
+              {DEFAULT_CATEGORIES.map((c) => {
+                const Icon = CATEGORY_ICONS_BY_NAME[c.name] ?? CircleHelp;
+                const selected = categoryId === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    disabled={saving}
+                    onClick={() => setCategoryId(selected ? "none" : c.id)}
+                    className={cn(
+                      "focus-visible:ring-ring/50 flex h-16 flex-col items-center justify-center gap-1 rounded-xl border px-2 text-xs font-medium transition-colors outline-none focus-visible:ring-[3px] disabled:opacity-50 sm:h-10 sm:flex-row sm:justify-start sm:gap-2 sm:px-3 sm:text-sm",
+                      selected
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-input text-muted-foreground hover:bg-muted hover:text-foreground dark:bg-input/30 bg-transparent",
+                    )}
+                  >
+                    <Icon className="size-4 shrink-0" aria-hidden />
+                    <span className="max-w-full truncate">{c.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+
           {/* Description */}
-          <div className="space-y-1.5">
-            <Label htmlFor="exp-desc">Description</Label>
-            <Textarea
+          <div className="space-y-2">
+            <Label htmlFor="exp-desc">
+              Note{" "}
+              <span className="text-muted-foreground font-normal">
+                (optional)
+              </span>
+            </Label>
+            <Input
               id="exp-desc"
               placeholder="e.g. Weekly grocery run"
-              rows={2}
+              maxLength={500}
               value={description}
+              aria-invalid={!!descError}
               onChange={(e) => {
                 setDescription(e.target.value);
                 setDescError(undefined);
               }}
-              onBlur={() => setDescError(validateDescription(description || undefined))}
-              className={`resize-none ${descError ? "border-destructive" : ""}`}
+              onBlur={() =>
+                setDescError(validateDescription(description || undefined))
+              }
               disabled={saving}
             />
             {descError && (
@@ -277,64 +378,75 @@ export function ExpenseFormDialog({
             )}
           </div>
 
-          {/* Category */}
-          <div className="space-y-1.5">
-            <Label htmlFor="exp-category">Category</Label>
-            <Select value={categoryId} onValueChange={setCategoryId} disabled={saving}>
-              <SelectTrigger id="exp-category">
-                <SelectValue placeholder="Select category…" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                {DEFAULT_CATEGORIES.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Location / Tag */}
-          <div className="space-y-1.5">
-            <Label htmlFor="exp-tag">Location</Label>
+          <div className="space-y-2">
+            <Label htmlFor="exp-tag">
+              Place{" "}
+              <span className="text-muted-foreground font-normal">
+                (optional)
+              </span>
+            </Label>
             <Select value={tagId} onValueChange={setTagId} disabled={saving}>
-              <SelectTrigger id="exp-tag">
-                <SelectValue placeholder="Select location…" />
+              <SelectTrigger id="exp-tag" className="w-full">
+                <SelectValue placeholder="Choose a place" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">None</SelectItem>
+                <SelectItem value="none">No place</SelectItem>
                 {DEFAULT_TAGS.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
+        </div>
 
-          {/* Paid by */}
-          <div className="space-y-1.5">
-            <Label htmlFor="exp-member">Paid by</Label>
-            <Select value={memberId} onValueChange={setMemberId} disabled={saving}>
-              <SelectTrigger id="exp-member">
-                <SelectValue placeholder="Select member…" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                {DEFAULT_MEMBERS.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <DialogFooter className="bg-muted/30 gap-2 border-t px-6 py-4 sm:justify-between">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onClose}
+            disabled={saving}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" disabled={saving} className="gap-2 sm:min-w-40">
+            {saving ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              !isEdit && <Plus className="size-4" />
+            )}
+            {isEdit
+              ? "Save changes"
+              : parsedAmount > 0
+                ? `Add ${formatCurrency(parsedAmount)}`
+                : "Add expense"}
+          </Button>
+        </DialogFooter>
+      </form>
+    </>
+  );
+}
 
-          <DialogFooter className="gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={saving} className="gap-2">
-              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-              {isEdit ? "Save Changes" : "Add Expense"}
-            </Button>
-          </DialogFooter>
-        </form>
+export function ExpenseFormDialog({
+  open,
+  onClose,
+  ...formProps
+}: ExpenseFormDialogProps) {
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
+      <DialogContent className="bg-card flex max-h-[calc(100svh-2rem)] flex-col gap-0 rounded-2xl p-0 sm:max-w-[460px]">
+        <ExpenseForm
+          key={formProps.mode === "edit" ? formProps.initialValues?.id : "new"}
+          onClose={onClose}
+          {...formProps}
+        />
       </DialogContent>
     </Dialog>
   );

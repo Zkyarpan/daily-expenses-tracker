@@ -1,6 +1,6 @@
 import { CircleHelp } from "lucide-react";
 
-import { CATEGORY_ICONS_BY_NAME } from "@/lib/config";
+import { CATEGORY_ICONS_BY_NAME, LOCALE_CONFIG } from "@/lib/config";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils";
 
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -37,7 +37,7 @@ const CategoryCard = ({
                 formatCurrencyCompact(amount)
               ) : (
                 <>
-                  <span>$</span>
+                  <span>{LOCALE_CONFIG.symbol}</span>
                   <NumberTicker value={amount} decimalPlaces={2} />
                 </>
               )}

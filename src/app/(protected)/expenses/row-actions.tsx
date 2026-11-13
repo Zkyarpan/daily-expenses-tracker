@@ -14,30 +14,29 @@ interface RowActionsProps {
 
 export function RowActions({ row, onEdit, onDelete }: RowActionsProps) {
   const expense = row.original;
+  const label = expense.description || "expense";
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center justify-end gap-0.5">
       {onEdit && (
         <Button
           variant="ghost"
-          size="sm"
+          size="icon"
           onClick={() => onEdit(expense)}
-          className="hover:bg-accent h-8 w-8 p-0"
-          aria-label="Edit expense"
+          className="text-muted-foreground hover:text-foreground size-8"
+          aria-label={`Edit ${label}`}
         >
-          <Pencil className="h-4 w-4" />
-          <span className="sr-only">Edit</span>
+          <Pencil className="size-3.5" />
         </Button>
       )}
       <Button
         variant="ghost"
-        size="sm"
+        size="icon"
         onClick={() => onDelete(expense)}
-        className="hover:bg-destructive hover:text-destructive-foreground h-8 w-8 p-0"
-        aria-label="Delete expense"
+        className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive size-8"
+        aria-label={`Delete ${label}`}
       >
-        <Trash2 className="h-4 w-4" />
-        <span className="sr-only">Delete</span>
+        <Trash2 className="size-3.5" />
       </Button>
     </div>
   );
