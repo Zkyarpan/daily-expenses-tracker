@@ -58,7 +58,7 @@ export const mockTrackers: Tracker[] = [
     color: "oklch(0.65 0.20 145)",
     createdAt: new Date("2025-09-01"),
     currentBalance: 3450,
-    description: "Goal: $10,000 by end of year",
+    description: "Goal: £10,000 by end of year",
     // Green
     entries: [
       {

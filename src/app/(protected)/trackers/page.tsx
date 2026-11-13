@@ -1,27 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, TrendingDown, TrendingUp } from "lucide-react";
+import { ListChecks, Plus, Scale, TrendingDown, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 
+import { EmptyState } from "@/components/shared/EmptyState";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { TrackersPageSkeleton } from "@/components/shared/PageSkeletons";
+import { StatCard } from "@/components/shared/StatCard";
 import { AddEntrySheet } from "@/components/trackers/AddEntrySheet";
 import { CreateTrackerSheet } from "@/components/trackers/CreateTrackerSheet";
 import TrackerCard from "@/components/trackers/TrackerCard";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { Tracker, TrackerEntry } from "@/entities/Tracker";
 import { useTrackers } from "@/hooks/trackers/useTrackers";
 import { useTrackerMutations } from "@/hooks/trackers/useTrackersMutations";
-import { LOCALE_CONFIG } from "@/lib/config";
 import { formatCurrency } from "@/lib/utils";
 
+const signed = (amount: number) =>
+  amount < 0 ? `−${formatCurrency(Math.abs(amount))}` : formatCurrency(amount);
+
 const TrackersPage = () => {
-  const { data: trackers = [] } = useTrackers();
+  const { data: trackers = [], isLoading } = useTrackers();
   const {
     create,
     update,
@@ -35,56 +35,38 @@ const TrackersPage = () => {
   const [addEntrySheetOpen, setAddEntrySheetOpen] = useState(false);
   const [selectedTracker, setSelectedTracker] = useState<Tracker | undefined>();
 
-  const formatCurrencySign = (amount: number) => {
-    const abs = Math.abs(amount);
-    const formatted = formatCurrency(abs);
-    return amount < 0 ? `-${LOCALE_CONFIG.symbol}${formatted}` : formatted;
-  };
-
-  const getTotalNet = () => {
-    if (trackers.length === 0)
-      return { breakdown: "No trackers yet", total: 0 };
-
-    const breakdownParts = trackers.map((t) => {
-      const sign = t.currentBalance >= 0 ? "+" : "-";
-      return `${sign}${LOCALE_CONFIG.symbol}${Math.abs(
-        t.currentBalance,
-      ).toFixed(2)} (${t.title})`;
-    });
-
-    const total = trackers.reduce((sum, t) => sum + t.currentBalance, 0);
-    const breakdown =
-      breakdownParts.join(" ") + ` = ${LOCALE_CONFIG.symbol}${total}`;
-
-    return { breakdown, total };
-  };
+  const totals = trackers.reduce(
+    (acc, t) => {
+      if (t.currentBalance >= 0) {
+        acc.assets += t.currentBalance;
+        acc.assetCount += 1;
+      } else {
+        acc.owed += Math.abs(t.currentBalance);
+        acc.owedCount += 1;
+      }
+      acc.net += t.currentBalance;
+      return acc;
+    },
+    { assetCount: 0, assets: 0, net: 0, owed: 0, owedCount: 0 },
+  );
 
   const handleCreateTracker = async (
     newTracker: Omit<Tracker, "id" | "createdAt" | "updatedAt" | "entries">,
   ) => {
-    const trackerWithEntries = {
-      ...newTracker,
-      entries: [],
-    };
-
-    await create(trackerWithEntries);
+    await create({ ...newTracker, entries: [] });
     toast.success("Tracker created!", {
       description: `${newTracker.title} has been created`,
     });
   };
+
   const handleEditTracker = async (
-    updated: Omit<
-      Tracker,
-      "id" | "createdAt" | "updatedAt" | "entries" | "initialBalance"
-    >,
+    updated: Omit<Tracker, "id" | "createdAt" | "updatedAt" | "entries" | "initialBalance">,
   ) => {
     if (!editingTracker) return;
-
     await update({ id: editingTracker.id, ...updated });
     toast.success("Tracker updated!", {
       description: `${updated.title} has been updated`,
     });
-
     setEditingTracker(undefined);
   };
 
@@ -103,94 +85,90 @@ const TrackersPage = () => {
     await addEntry({ entryData, trackerId });
   };
 
-  const openEditSheet = (tracker: Tracker) => {
-    setEditingTracker(tracker);
-  };
+  const openEditSheet = (tracker: Tracker) => setEditingTracker(tracker);
 
   const openAddEntrySheet = (tracker: Tracker) => {
     setSelectedTracker(tracker);
     setAddEntrySheetOpen(true);
   };
 
-  const { total: totalNet, breakdown: totalBreakdown } = getTotalNet();
-  const isPositive = totalNet >= 0;
+
+  const newTrackerButton = (
+    <Button size="sm" className="gap-1.5" onClick={() => setCreateSheetOpen(true)}>
+      <Plus className="size-3.5" />
+      New tracker
+    </Button>
+  );
+
+  const plural = (n: number) => `${n} ${n === 1 ? "tracker" : "trackers"}`;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-secondary rounded-lg p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Misc Trackers</h1>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Track debts, savings, loans, and more
-            </p>
-          </div>
-          <Button
-            size="sm"
-            className="gap-2"
-            onClick={() => setCreateSheetOpen(true)}
-          >
-            <Plus className="h-4 w-4" />
-            New Tracker
-          </Button>
-        </div>
+      <PageHeader
+        title="Trackers"
+        description="Running balances for debts, savings, loans and anything else you want to keep an eye on."
+        actions={newTrackerButton}
+      />
 
-        {/* Net Summary */}
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="mt-6 flex items-center gap-2">
-              <span className="text-muted-foreground text-sm">Net Total:</span>
-              <div className="flex items-center gap-2">
-                <span
-                  className={`text-3xl font-bold ${
-                    isPositive
-                      ? "text-green-600 dark:text-green-500"
-                      : "text-red-600 dark:text-red-500"
-                  }`}
-                >
-                  {formatCurrencySign(totalNet)}
+      {isLoading ? (
+        <TrackersPageSkeleton withHeader={false} />
+      ) : trackers.length > 0 ? (
+        <>
+          {/* Summary */}
+          <section aria-label="Summary" className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+            <StatCard
+              className="col-span-2 sm:col-span-1"
+              label="Net balance"
+              icon={Scale}
+              value={
+                <span className={totals.net < 0 ? "text-destructive" : undefined}>
+                  {signed(totals.net)}
                 </span>
-                {isPositive ? (
-                  <TrendingUp className="h-6 w-6 text-green-600 dark:text-green-500" />
-                ) : (
-                  <TrendingDown className="h-6 w-6 text-red-600 dark:text-red-500" />
-                )}
-              </div>
-            </div>
-          </TooltipTrigger>
-
-          <TooltipContent>
-            <p>{totalBreakdown}</p>
-          </TooltipContent>
-        </Tooltip>
-      </div>
-      {/* Trackers Grid */}
-      {trackers.length > 0 ? (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {trackers.map((tracker) => (
-            <TrackerCard
-              key={tracker.id}
-              tracker={tracker}
-              onEdit={openEditSheet}
-              onDelete={handleDeleteTracker}
-              onAddEntry={openAddEntrySheet}
-              onCleanup={cleanup}
+              }
+              hint={`Across ${plural(trackers.length)}`}
             />
-          ))}
-        </div>
+            <StatCard
+              label="In credit"
+              icon={TrendingUp}
+              value={formatCurrency(totals.assets)}
+              hint={totals.assetCount ? plural(totals.assetCount) : "None"}
+            />
+            <StatCard
+              label="Owed"
+              icon={TrendingDown}
+              value={
+                <span className={totals.owed > 0 ? "text-destructive" : undefined}>
+                  {totals.owed > 0 ? `−${formatCurrency(totals.owed)}` : formatCurrency(0)}
+                </span>
+              }
+              hint={totals.owedCount ? plural(totals.owedCount) : "Nothing owed"}
+            />
+          </section>
+
+          {/* Trackers */}
+          <section aria-label="Trackers" className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            {trackers.map((tracker) => (
+              <TrackerCard
+                key={tracker.id}
+                tracker={tracker}
+                onEdit={openEditSheet}
+                onDelete={handleDeleteTracker}
+                onAddEntry={openAddEntrySheet}
+                onCleanup={cleanup}
+              />
+            ))}
+          </section>
+        </>
       ) : (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground mb-4">No trackers yet</p>
-            <Button className="gap-2" onClick={() => setCreateSheetOpen(true)}>
-              <Plus className="h-4 w-4" />
-              Create Your First Tracker
-            </Button>
-          </CardContent>
-        </Card>
+        <EmptyState
+          headingLevel="h2"
+          icon={ListChecks}
+          title="No trackers yet"
+          description="Create a tracker to follow a debt being paid down, a savings goal, or money lent to a friend."
+          actions={newTrackerButton}
+        />
       )}
+
       {/* Create/Edit Tracker Sheet */}
       <CreateTrackerSheet
         open={createSheetOpen || !!editingTracker}

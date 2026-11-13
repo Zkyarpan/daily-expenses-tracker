@@ -84,8 +84,8 @@ export const AddEntrySheet = ({
             <span
               className={
                 currentBalance >= 0
-                  ? "font-semibold text-green-600 dark:text-green-500"
-                  : "font-semibold text-red-600 dark:text-red-500"
+                  ? "font-semibold text-success"
+                  : "font-semibold text-destructive"
               }
             >
               {LOCALE_CONFIG.symbol}
