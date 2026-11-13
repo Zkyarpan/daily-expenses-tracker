@@ -29,6 +29,7 @@ src/
 ├── app/              # Pages & API routes (Next.js App Router)
 ├── components/
 │   ├── ui/           # shadcn/ui + MagicUI primitives (do not edit manually)
+│   ├── shared/       # Design-system components: PageHeader, StatCard, Money, Meter, StatusBadge, EmptyState, ErrorState
 │   ├── expenses/     # Expense feature components
 │   ├── yearly-charts/# Chart components
 │   ├── trackers/     # Tracker components
@@ -80,7 +81,8 @@ src/
 ### UI Patterns
 
 - **Skeleton loading**: Use `<Skeleton>` from `@/components/ui/skeleton` in place of spinners — shape the skeleton to match the real layout
-- **Empty states**: Use a centered icon + heading + subtext pattern (see `DataTable` empty row for reference)
+- **Empty states**: Use `<EmptyState>` from `@/components/shared/EmptyState` (icon + heading + guidance + action)
+- **Design system**: tokens live in `src/app/globals.css` (see `docs/UI_UX_REDESIGN.md`). Use semantic colours (`text-success`, `text-warning`, `text-destructive`, `bg-chart-1…5`) instead of raw palette classes; use `<PageHeader>`, `<StatCard>`, `<Money>`, `<Meter>` (thresholds follow `ALERT_THRESHOLDS`), `<StatusBadge>` and `<ErrorState>` from `@/components/shared/`. The dev-only reference page is `/design-system`
 - **Animated numbers**: Use `<NumberTicker>` from `@/components/ui/number-ticker` for currency totals that change on interaction; always put the `$` symbol outside the ticker span
 - **MagicCard**: Wrap interactive cards with `<MagicCard>` and set `border-0 shadow-none` on the inner `<Card>` to avoid double borders
 - **Command palette**: Global ⌘K navigation is in `CommandPalette.tsx` — add new routes to the `NAV_ITEMS` array there

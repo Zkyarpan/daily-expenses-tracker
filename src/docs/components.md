@@ -63,7 +63,7 @@ Renders: month/year selector, expense count, animated total, trend delta badge, 
 ```tsx
 <CategoryCard
   categoryName="Grocery"
-  amount={1234.56}     // animated with NumberTicker when < $10,000
+  amount={1234.56}     // animated with NumberTicker when < £10,000
   count={15}
   percentage={85}      // 0–100, relative to highest category
 />

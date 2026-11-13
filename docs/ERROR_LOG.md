@@ -824,3 +824,38 @@ No Supabase tables, migrations, RLS policies or authentication code were changed
 | Authenticated end-to-end on live data | **Not verified.** Assistant cannot sign in; owner to test on the Dashboard |
 
 ---
+
+## UI/UX redesign: Stage 1 (audit) and Stage 2 (design foundation) (2026-11-12/13)
+
+Checkpoint: commit `cf33ddf`, tag `checkpoint/pre-redesign-2026-11-12` (all
+previously uncommitted work; a secret scan found no keys; `.env*` is ignored).
+Details and measurements are in [PERFORMANCE_REPORT.md](PERFORMANCE_REPORT.md)
+and [UI_UX_REDESIGN.md](UI_UX_REDESIGN.md).
+
+### Errors found
+
+| # | Error | Status |
+|---|---|---|
+| 1 | iCloud eviction recurred: 20,572 of 49,690 `node_modules` files dataless; `/yearly-charts` took **95.1 s** to compile (1.4 s in a local folder) | Reinstalled with `npm ci` (0 dataless). **Recurs:** within minutes 7,101 `node_modules` and ~800 project files (including `package.json`, `next.config.ts`, `.env.local`) were evicted again; disk 11 → 7.9 GiB free. Durable fix is the owner's decision: move the project out of `~/Documents` or free disk space |
+| 2 | `npm ci` hung for > 10 min, blocked in `read()` of the evicted `package.json` (the install itself had completed) | Stopped the process after confirming the tree with `npm ls` (exit 0). In a local folder `npm ci` takes 7.5 s |
+| 3 | `git status` hung on evicted files (`src/app/favicon.ico`) | Run git with `-c core.trustctime=false -c core.checkStat=minimal`: 0.04 s. No repository config changed |
+| 4 | iCloud conflict copies inside `.git` (`HEAD 2`, `gk/config 2`; pending `index 2/3`) and `.next` (`… 2.json` manifests). This explains the earlier "missing build manifests" errors | Not changed. `git fsck` is clean; git ignores these names |
+| 5 | Stale `next-server` from an earlier session's scratch copy was listening on port 3002 | Stopped (duplicate server) |
+| 6 | `npm run build` fails: 23 pre-existing ESLint errors, then `/login` prerender (`useSearchParams()` without `<Suspense>`) | **Open.** `/login` fix belongs to Stage 3 (auth redesign); lint errors are fixed as each owning file is redesigned, with the 7 `set-state-in-effect` errors in Stage 7 |
+| 7 | Two dashboard loads (1024 px and 375 px) logged a React hydration-attribute warning in the first Stage 2 browser run | Not reproduced in 39 later loads, including a full re-run of all 26 views. The run started right after every source file's timestamp changed (sync into the clone), so Turbopack was recompiling. Recorded as transient; watched in later stages |
+| 8 | `/design-system` returned **200**, not 404, in a production build | Content is not served (the not-found UI renders). The status is 200 because `loading.tsx` streams before `notFound()`. Removed the page's custom `<title>`. Documented rather than restructuring routes |
+| 9 | Light-mode warning text on its 10 % tint was 4.36:1 (needs 4.5:1) | Darkened the token: 4.90:1 |
+
+### Verification
+
+| Check | Result |
+|---|---|
+| `npx tsc --noEmit` | 0 errors |
+| ESLint, changed files | 0 errors (2 pre-existing key-order warnings in `utils.ts`) |
+| ESLint, whole project | 23 errors / 58 warnings, **unchanged** (no new problems) |
+| `npm test` | **384 pass, 0 fail** |
+| Production build (`--no-lint`, temporary `<Suspense>` on `/login` in the clone only) | Passes; First Load JS unchanged on every existing route |
+| Browser (headless Edge, demo mode) | 26 views: 9 routes plus `/design-system` at 375/768/1024/1440 px, light and dark: 0 console errors, 0 exceptions, no horizontal overflow (second run; see #7) |
+| Authenticated pages with real data | **Not verified.** The assistant cannot sign in; the shell change (user id from server) needs an owner sign-in check in Stage 3 |
+
+---

@@ -55,7 +55,7 @@ Replaced the full-page `<Loader2>` spinner with a skeleton layout that mirrors t
 
 #### Animated total (`ExpenseHeader.tsx`, `CategoryCard.tsx`)
 - `ExpenseHeader` prop changed from `formattedTotal: string` to `total: number`. The `$` symbol is rendered inline, and `<NumberTicker value={total} decimalPlaces={2} />` handles the animated count-up.
-- `CategoryCard` animates amounts below $10,000 with `NumberTicker`. Amounts ≥ $10,000 keep the compact format (`$10K`) since the ticker cannot format abbreviated units.
+- `CategoryCard` animates amounts below £10,000 with `NumberTicker`. Amounts ≥ £10,000 keep the compact format (`£10K`) since the ticker cannot format abbreviated units.
 
 ```tsx
 // ExpenseHeader total display
