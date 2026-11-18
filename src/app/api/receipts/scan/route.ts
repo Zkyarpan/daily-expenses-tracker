@@ -17,7 +17,7 @@
 
 import { z } from "zod";
 
-import { callPollinations, DEFAULT_MODEL } from "@/lib/insights/pollinations";
+import { callAI } from "@/lib/ai/provider";
 import { createRateLimiter } from "@/lib/insights/rateLimit";
 import { resolveToday } from "@/lib/money/server";
 import { buildReceiptMessages, parseImageDataUrl, parseReceiptContent } from "@/lib/receipts/receipt";
@@ -47,12 +47,11 @@ export async function POST(request: Request) {
   if ("error" in image) return apiError(400, image.error, { field: "image" });
 
   const today = resolveToday(request);
-  const result = await callPollinations({
-    apiKey: process.env.POLLINATIONS_API_KEY,
+  const result = await callAI({
     maxCompletionTokens: 800,
     messages: buildReceiptMessages(body.data.image, today),
-    model: process.env.POLLINATIONS_VISION_MODEL?.trim() || process.env.POLLINATIONS_MODEL?.trim() || DEFAULT_MODEL,
     timeoutMs: 45_000,
+    vision: true,
   });
 
   if (!result.ok) {

@@ -66,7 +66,7 @@ const MonthFilter = ({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80" align="end">
+      <PopoverContent className="w-[min(20rem,calc(100vw-1.5rem))]" align="end">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-medium">Select Months</h4>

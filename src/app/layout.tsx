@@ -77,11 +77,15 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  // Pinch-zoom stays available (accessibility). Fields use 16px text on touch
+  // screens (globals.css), so iPhones never auto-zoom when one is tapped.
   colorScheme: "light dark",
+  initialScale: 1,
   themeColor: [
     { color: SITE.themeColor.light, media: "(prefers-color-scheme: light)" },
     { color: SITE.themeColor.dark, media: "(prefers-color-scheme: dark)" },
   ],
+  width: "device-width",
 };
 
 /** Structured data so search engines understand what the app is. */
@@ -107,9 +111,14 @@ export default function RootLayout({
     <html
       lang="en-GB"
       className={`${inter.variable} ${jakarta.variable} ${jetbrainsMono.variable}`}
+      // Page changes jump straight to the top instead of smooth-scrolling
+      // (smooth scrolling stays on for in-page links like "Back to top").
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
-      <body className="font-sans antialiased">
+      {/* Browser extensions (e.g. Grammarly) inject attributes on <body> before
+          React hydrates; suppress the resulting attribute-mismatch warning. */}
+      <body className="font-sans antialiased" suppressHydrationWarning>
         <script
           type="application/ld+json"
           // Static, app-defined JSON (no user input), escaped for <script>.

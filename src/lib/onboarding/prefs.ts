@@ -16,18 +16,22 @@ export interface EngagementPrefs {
   dailyReminder: boolean;
   /** HH:MM, local time. */
   reminderTime: string;
+  /** Pop-ups when something notable happens with spending (big spend, pace…). */
+  spendingAlerts: boolean;
   /** One "did you know…" tip a day. */
   tips: boolean;
 }
 
-export const DEFAULT_PREFS: EngagementPrefs = { dailyReminder: false, reminderTime: "20:00", tips: true };
+export const DEFAULT_PREFS: EngagementPrefs = { dailyReminder: false, reminderTime: "20:00", spendingAlerts: true, tips: true };
 
 const KEYS = {
+  checkIn: "check-in-last-answered",
   checklistHidden: "onboarding-checklist-hidden",
   done: "onboarding-done",
   lastReminder: "reminder-last-shown",
   lastTip: "tip-last-shown",
   prefs: "engagement-prefs",
+  signalsSeen: "spending-signals-seen",
 } as const;
 
 const EVENT = "engagement-change";
@@ -61,8 +65,12 @@ export const markDone = (id: TipId) => {
   if (!readDone()[id]) write(KEYS.done, { ...readDone(), [id]: true });
 };
 
-export const readStamp = (key: "lastReminder" | "lastTip") => read<string | null>(KEYS[key], null);
-export const writeStamp = (key: "lastReminder" | "lastTip", dateKey: string) => write(KEYS[key], dateKey);
+export const readStamp = (key: "checkIn" | "lastReminder" | "lastTip") => read<string | null>(KEYS[key], null);
+export const writeStamp = (key: "checkIn" | "lastReminder" | "lastTip", dateKey: string) => write(KEYS[key], dateKey);
+
+/** Spending alerts already shown on this device (newest 300 ids). */
+export const readSeenSignals = () => read<string[]>(KEYS.signalsSeen, []);
+export const addSeenSignals = (ids: string[]) => write(KEYS.signalsSeen, [...readSeenSignals(), ...ids].slice(-300));
 
 export const isChecklistHidden = () => read<boolean>(KEYS.checklistHidden, false);
 export const setChecklistHidden = (hidden: boolean) => write(KEYS.checklistHidden, hidden);

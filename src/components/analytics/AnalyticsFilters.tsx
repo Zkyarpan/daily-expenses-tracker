@@ -4,8 +4,8 @@ import { memo, useId, useMemo, useState } from "react";
 import { RotateCcw } from "lucide-react";
 
 import MonthYearSelector from "@/components/expenses/MonthYearSelector";
+import { DatePicker } from "@/components/shared/DatePicker";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CategoryFilter from "@/components/yearly-charts/CategoryFilter";
@@ -73,35 +73,36 @@ const CustomRangeInputs = ({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex flex-wrap items-center gap-2">
+      {/* Phones: "From / to" labels in a column beside full-width date fields. */}
+      <div className="grid grid-cols-[auto_1fr] items-center gap-2 sm:flex sm:flex-wrap">
         <Label htmlFor={`${id}-start`} className="text-muted-foreground text-xs font-normal">
           From
         </Label>
-        <Input
+        <DatePicker
           id={`${id}-start`}
-          type="date"
-          className="h-8 w-38"
+          className="h-9 w-full border sm:w-40"
           value={draft.start}
           max={draft.end || undefined}
+          presets={false}
           aria-invalid={!!error}
           aria-describedby={describedBy}
-          onChange={(e) => update({ ...draft, start: e.target.value })}
+          onChange={(start) => update({ ...draft, start })}
         />
         <Label htmlFor={`${id}-end`} className="text-muted-foreground text-xs font-normal">
           to
         </Label>
-        <Input
+        <DatePicker
           id={`${id}-end`}
-          type="date"
-          className="h-8 w-38"
+          className="h-9 w-full border sm:w-40"
           value={draft.end}
           min={draft.start || undefined}
+          presets={false}
           aria-invalid={!!error}
           aria-describedby={describedBy}
-          onChange={(e) => update({ ...draft, end: e.target.value })}
+          onChange={(end) => update({ ...draft, end })}
         />
         {!error && (
-          <span id={`${id}-hint`} className="text-muted-foreground text-xs">
+          <span id={`${id}-hint`} className="text-muted-foreground col-span-2 text-xs">
             Max {MAX_CUSTOM_RANGE_MONTHS} months
           </span>
         )}
@@ -145,7 +146,7 @@ const AnalyticsFilters = ({
           value={selection.kind}
           onValueChange={(v) => onSelectionChange(switchKind(selection, v as PeriodSelection["kind"]))}
         >
-          <TabsList aria-label="Period type" className="group-data-[orientation=horizontal]/tabs:h-8">
+          <TabsList aria-label="Period type" className="w-full group-data-[orientation=horizontal]/tabs:h-9 sm:w-fit sm:group-data-[orientation=horizontal]/tabs:h-8">
             <TabsTrigger value="month" className="px-3 text-xs">Month</TabsTrigger>
             <TabsTrigger value="year" className="px-3 text-xs">Year</TabsTrigger>
             <TabsTrigger value="custom" className="px-3 text-xs">Custom</TabsTrigger>

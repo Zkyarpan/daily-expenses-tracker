@@ -90,14 +90,30 @@ function TableSkeleton({ rows = 6 }: { rows?: number }) {
 export function DashboardPageSkeleton() {
   return (
     <Loading label="Loading dashboard…">
-      <HeaderSkeleton actions={2} eyebrow />
-      <div className="grid gap-4 lg:grid-cols-3">
-        <PanelSkeleton className="lg:col-span-2" height="h-[220px]" />
-        <PanelSkeleton height="h-[220px]" />
+      {/* Hero: greeting + this month's number, action tiles beside it */}
+      <div aria-hidden className="bg-card grid gap-6 rounded-3xl p-5 shadow-md sm:p-8 lg:grid-cols-[1.3fr_1fr] lg:items-end">
+        <div className="space-y-3">
+          <Skeleton className="h-3.5 w-40 rounded-full" />
+          <Skeleton className="h-8 w-56 max-w-full rounded-lg" />
+          <Skeleton className="mt-4 h-4 w-28 rounded-full" />
+          <Skeleton className="h-12 w-48 rounded-lg" />
+          <Skeleton className="h-4 w-64 max-w-full rounded-full" />
+        </div>
+        <div className="grid grid-cols-2 gap-2.5">
+          {Array.from({ length: 4 }, (_, i) => (
+            <Skeleton key={i} className="h-16 rounded-2xl" />
+          ))}
+        </div>
       </div>
-      <div className="grid gap-4 lg:grid-cols-3">
-        <PanelSkeleton className="lg:col-span-2" height="h-[280px]" />
-        <PanelSkeleton height="h-[280px]" />
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <PanelSkeleton height="h-[300px]" />
+          <PanelSkeleton height="h-[280px]" />
+        </div>
+        <div className="space-y-6">
+          <PanelSkeleton height="h-[260px]" />
+          <PanelSkeleton height="h-[180px]" />
+        </div>
       </div>
     </Loading>
   );

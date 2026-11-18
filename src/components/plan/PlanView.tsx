@@ -606,9 +606,9 @@ export function PlanView() {
               { label: "In 1 year", value: at(12) },
               { label: "In 2 years", value: at(24) },
             ].map((s) => (
-              <div key={s.label} className="bg-muted/50 rounded-xl px-3 py-2.5">
+              <div key={s.label} className="bg-muted/50 min-w-0 rounded-xl px-2.5 py-2.5 sm:px-3">
                 <dt className="text-muted-foreground text-xs">{s.label}</dt>
-                <dd className="text-base font-semibold tabular-nums sm:text-lg">
+                <dd className="text-sm font-semibold tabular-nums sm:text-lg">
                   <Money amount={s.value} />
                 </dd>
               </div>

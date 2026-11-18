@@ -3,29 +3,28 @@
 import { useMemo, useSyncExternalStore } from "react";
 import {
   ArrowUpRight,
-  CalendarDays,
-  ChartLine,
+  Camera,
   ChevronRight,
   CircleHelp,
-  Gift,
-  HandCoins,
-  PiggyBank,
+  MessagesSquare,
   Plus,
   Receipt,
+  Sparkles,
   Upload,
 } from "lucide-react";
 import Link from "next/link";
 
 import { AlertBanner } from "@/components/alerts/AlertBanner";
 import { expensesData } from "@/components/expenses/data/expenseData";
+import { useHelp } from "@/components/help/HelpCenter";
 import { AIInsightsPanel } from "@/components/insights/AIInsightsPanel";
 import { MoneyAtAGlance } from "@/components/money/MoneyAtAGlance";
+import { useQuickAdd } from "@/components/money/QuickAddProvider";
 import { GettingStarted } from "@/components/onboarding/GettingStarted";
 import { useAlerts } from "@/components/providers/context/AlertsContext";
 import { displayNameOf, useCurrentUser } from "@/components/providers/context/CurrentUserContext";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Money } from "@/components/shared/Money";
-import { PageHeader } from "@/components/shared/PageHeader";
 import { DashboardPageSkeleton } from "@/components/shared/PageSkeletons";
 import { Delta } from "@/components/shared/StatCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
@@ -35,6 +34,7 @@ import type { ExpenseWithDetails } from "@/entities/Expense";
 import { useYearlyExpenses } from "@/hooks/yearly-expenses/useYearlyExpenses";
 import { CATEGORY_ICONS_BY_NAME } from "@/lib/config";
 import { parseLocalDate } from "@/lib/dateUtils";
+import { MONEY_QUESTIONS } from "@/lib/help/topics";
 import { getIsDemoMode } from "@/lib/supabase";
 import { cn, formatCurrency, getCategoryColor } from "@/lib/utils";
 
@@ -48,15 +48,6 @@ const getDemoYear = () =>
     (latestYear, expense) => Math.max(latestYear, parseLocalDate(expense.date).getFullYear()),
     0,
   );
-
-const QUICK_ACTIONS = [
-  { hint: "Record what you spent", href: "/expenses", icon: Plus, label: "Add an expense" },
-  { hint: "Who owes who", href: "/lend-borrow", icon: HandCoins, label: "Lend & borrow" },
-  { hint: "Save up for things", href: "/wishlist", icon: Gift, label: "Wishlist" },
-  { hint: "Limits per category", href: "/budgets", icon: PiggyBank, label: "Set budgets" },
-  { hint: "CSV or PDF statement", href: "/import-expenses", icon: Upload, label: "Import a statement" },
-  { hint: "Trends and reports", href: "/analytics", icon: ChartLine, label: "View analytics" },
-] as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Client-only values (time of day, today's date). The server snapshot is used
@@ -78,6 +69,20 @@ const useTodayLabel = () =>
     () => "",
   );
 
+/** "Today", "Yesterday" or "Wed 24 Dec" for a YYYY-MM-DD key (client-only). */
+const useDayLabel = () => {
+  const todayKey = useSyncExternalStore(noopSubscribe, () => new Date().toDateString(), () => "");
+  return (date: Date) => {
+    if (todayKey) {
+      const today = new Date(todayKey);
+      const diff = Math.round((today.getTime() - new Date(date.toDateString()).getTime()) / 86_400_000);
+      if (diff === 0) return "Today";
+      if (diff === 1) return "Yesterday";
+    }
+    return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", weekday: "short" });
+  };
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Building blocks
 // ─────────────────────────────────────────────────────────────────────────────
@@ -97,8 +102,8 @@ function Panel({
   title: string;
 }) {
   return (
-    <section className={cn("bg-card min-w-0 rounded-2xl p-5 shadow-md sm:p-6", className)}>
-      <div className="mb-5 flex items-start justify-between gap-4">
+    <section className={cn("bg-card min-w-0 rounded-2xl p-4 shadow-md sm:p-6", className)}>
+      <div className="mb-4 flex items-start justify-between gap-4 sm:mb-5">
         <div className="min-w-0">
           <h2 className="text-base font-semibold tracking-tight">{title}</h2>
           {description && <p className="text-muted-foreground mt-0.5 text-xs">{description}</p>}
@@ -107,6 +112,17 @@ function Panel({
       </div>
       {children}
     </section>
+  );
+}
+
+function PanelLink({ children, href }: { children: React.ReactNode; href: string }) {
+  return (
+    <Button asChild variant="ghost" size="sm" className="text-muted-foreground -mr-2 h-8 shrink-0 gap-1 text-xs">
+      <Link href={href}>
+        {children}
+        <ChevronRight className="size-3.5" />
+      </Link>
+    </Button>
   );
 }
 
@@ -126,7 +142,7 @@ function MonthBars({
   const max = Math.max(0, ...totals);
 
   return (
-    <ul aria-label={`Spending by month in ${year}`} className="flex h-32 items-end gap-1 sm:gap-2">
+    <ul aria-label={`Spending by month in ${year}`} className="flex h-36 items-end gap-1 sm:gap-2">
       {totals.map((total, i) => {
         const isFocus = i === focus;
         const isFuture = i > lastStarted;
@@ -175,21 +191,64 @@ function MonthBars({
   );
 }
 
-function SummaryStat({ children, label }: { children: React.ReactNode; label: string }) {
+function Stat({ children, label }: { children: React.ReactNode; label: string }) {
   return (
-    <div className="min-w-0 px-3 first:pl-0 last:pr-0 sm:px-5">
-      <dt className="text-muted-foreground truncate text-xs">{label}</dt>
+    <div className="bg-muted/50 min-w-0 rounded-xl px-3 py-2.5">
+      <dt className="text-muted-foreground text-xs leading-tight">{label}</dt>
       <dd className="mt-1 truncate text-sm font-semibold tabular-nums sm:text-base">{children}</dd>
     </div>
   );
 }
 
-function MonthRow({ children, label }: { children: React.ReactNode; label: string }) {
+function DetailRow({ children, label }: { children: React.ReactNode; label: string }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
       <dt className="text-muted-foreground">{label}</dt>
       <dd className="min-w-0 truncate text-right font-medium tabular-nums">{children}</dd>
     </div>
+  );
+}
+
+/** Big, tappable action tile used in the hero. */
+function ActionTile({
+  className,
+  hint,
+  href,
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  className?: string;
+  hint: string;
+  href?: string;
+  icon: typeof Plus;
+  label: string;
+  onClick?: () => void;
+}) {
+  const body = (
+    <>
+      <span className="bg-background/70 text-foreground flex size-9 shrink-0 items-center justify-center rounded-xl">
+        <Icon className="size-4" aria-hidden />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm leading-snug font-semibold">{label}</span>
+        <span className="text-muted-foreground block text-xs sm:truncate">{hint}</span>
+      </span>
+    </>
+  );
+  // Phones: icon above the text so labels never squeeze; side by side from sm.
+  const classes = cn(
+    "bg-muted/60 hover:bg-muted focus-visible:ring-ring flex min-h-16 flex-col items-start gap-2 rounded-2xl p-3 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none sm:flex-row sm:items-center sm:gap-3",
+    className,
+  );
+  return href ? (
+    <Link href={href} className={classes}>
+      {body}
+    </Link>
+  ) : (
+    <button type="button" onClick={onClick} className={classes}>
+      {body}
+    </button>
   );
 }
 
@@ -237,11 +296,16 @@ const computeStats = (expenses: ExpenseWithDetails[]): YearStats => {
     monthlyTotals: monthlyTotals.map((v) => Math.round(v * 100) / 100),
     recentExpenses: [...expenses]
       .sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime())
-      .slice(0, 6),
+      .slice(0, 7),
     totalSpend: expenses.reduce((sum, e) => sum + e.amount, 0),
   };
 };
 
+/**
+ * Home: a hero with this month's number and the main actions, then a
+ * two-column body — the year and recent activity on the left, categories,
+ * month details and "ask about your money" on the right — and AI insights.
+ */
 const Dashboard = () => {
   const isDemoMode = getIsDemoMode();
   const now = new Date();
@@ -252,7 +316,10 @@ const Dashboard = () => {
 
   const greeting = useGreeting();
   const todayLabel = useTodayLabel();
+  const dayLabel = useDayLabel();
   const firstName = displayNameOf(useCurrentUser()).split(" ")[0];
+  const { openExpense, openReceiptScan } = useQuickAdd();
+  const { openHelp } = useHelp();
 
   const { alerts, dismiss } = useAlerts();
   const currentMonthAlerts = alerts.filter(
@@ -292,40 +359,87 @@ const Dashboard = () => {
   const largest = largestByMonth[focus];
 
   const averageMonthlySpend = totalSpend / Math.max(activeMonths, 1);
-  const topCategory = categoryTotals[0];
-  const topShare = topCategory && totalSpend > 0 ? (topCategory.amount / totalSpend) * 100 : 0;
-  const maxCategory = topCategory?.amount ?? 0;
+  const maxCategory = categoryTotals[0]?.amount ?? 0;
+
+  // Recent activity grouped under day headings.
+  const recentByDay: { expenses: ExpenseWithDetails[]; label: string }[] = [];
+  for (const expense of recentExpenses) {
+    const label = dayLabel(parseLocalDate(expense.date));
+    const last = recentByDay.at(-1);
+    if (last?.label === label) last.expenses.push(expense);
+    else recentByDay.push({ expenses: [expense], label });
+  }
+
+  const monthLabel = isCurrentMonth ? `${MONTHS[focus]} so far` : `${MONTHS[focus]} ${year}`;
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        eyebrow={
-          <>
-            <span className="text-xs font-semibold tracking-wider uppercase">
-              {todayLabel || `${year} overview`}
-            </span>
-            {isDemoMode && <StatusBadge>Demo data · {year}</StatusBadge>}
-          </>
-        }
-        title={firstName ? `${greeting}, ${firstName}` : greeting}
-        description={`Here’s where your money stands in ${year}.`}
-        actions={
-          <>
-            <Button asChild variant="outline" size="sm" className="gap-1.5">
-              <Link href="/import-expenses">
-                <Upload className="size-3.5" />
-                Import
-              </Link>
-            </Button>
-            <Button asChild size="sm" className="gap-1.5">
-              <Link href="/expenses">
-                All expenses
-                <ArrowUpRight className="size-3.5" />
-              </Link>
-            </Button>
-          </>
-        }
-      />
+      {/* ── Hero: greeting, this month's number, main actions ─────────────── */}
+      <section
+        aria-labelledby="home-title"
+        className="bg-card relative overflow-hidden rounded-3xl p-5 shadow-md sm:p-8"
+      >
+        {/* Soft brand glow, decorative only. */}
+        <div
+          aria-hidden
+          className="bg-primary/15 pointer-events-none absolute -top-24 -right-24 size-72 rounded-full blur-3xl"
+        />
+        <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:items-end">
+          <div className="min-w-0">
+            <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs font-semibold tracking-wider uppercase">
+              <span>{todayLabel || `${year} overview`}</span>
+              {isDemoMode && <StatusBadge>Demo data · {year}</StatusBadge>}
+            </div>
+            <h1 id="home-title" className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
+              {firstName ? `${greeting}, ${firstName}` : greeting}
+            </h1>
+
+            {expenses.length > 0 ? (
+              <>
+                <p className="text-muted-foreground mt-5 text-sm">Spent in {monthLabel}</p>
+                <p className="mt-1 text-4xl font-semibold tracking-tight sm:text-5xl">
+                  <Money amount={monthTotal} />
+                </p>
+                <div className="text-muted-foreground mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs">
+                  {monthChange !== null ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Delta delta={{ goodDirection: "down", value: monthChange }} />
+                      vs {MONTHS[focus - 1]}
+                    </span>
+                  ) : (
+                    <span>{focus === 0 ? "First month of the year" : `Nothing in ${MONTHS[focus - 1]} to compare`}</span>
+                  )}
+                  <span aria-hidden className="bg-border h-3 w-px" />
+                  <span>
+                    <Money amount={dailyAverage} className="text-foreground font-medium" /> a day
+                  </span>
+                  {projected !== null && (
+                    <>
+                      <span aria-hidden className="bg-border h-3 w-px" />
+                      <span>
+                        On pace for <Money amount={projected} className="text-foreground font-medium" />
+                      </span>
+                    </>
+                  )}
+                </div>
+              </>
+            ) : (
+              <p className="text-muted-foreground mt-2 text-sm">Add your first expense to see where your money goes.</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            <ActionTile icon={Plus} label="Add expense" hint="Takes seconds" onClick={openExpense} />
+            {isDemoMode ? (
+              <ActionTile icon={Upload} label="Import" hint="CSV or PDF" href="/import-expenses" />
+            ) : (
+              <ActionTile icon={Camera} label="Scan receipt" hint="AI fills it in" onClick={openReceiptScan} />
+            )}
+            <ActionTile icon={Receipt} label="All expenses" hint="Search & edit" href="/expenses" />
+            <ActionTile icon={Sparkles} label="Ask AI" hint="About your money" href="/assistant" />
+          </div>
+        </div>
+      </section>
 
       {!isDemoMode && currentMonthAlerts.length > 0 && (
         <AlertBanner alerts={currentMonthAlerts} onDismiss={dismiss} showBudgetsLink />
@@ -345,8 +459,8 @@ const Dashboard = () => {
           description="Add an expense or import a statement to start building your spending overview."
           actions={
             <>
-              <Button asChild size="sm">
-                <Link href="/expenses">Add an expense</Link>
+              <Button size="sm" onClick={openExpense}>
+                Add an expense
               </Button>
               <Button asChild size="sm" variant="outline">
                 <Link href="/import-expenses">
@@ -359,244 +473,170 @@ const Dashboard = () => {
         />
       ) : (
         <>
-          {/* Year + month summary */}
-          <div className="grid gap-4 lg:grid-cols-3">
-            <section
-              aria-labelledby="year-summary-title"
-              className="bg-card flex min-w-0 flex-col rounded-2xl p-5 shadow-md sm:p-6 lg:col-span-2"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <h2 id="year-summary-title" className="text-muted-foreground text-sm font-medium">
-                    Spent in {year}
-                  </h2>
-                  <p className="mt-1.5 text-3xl font-semibold tracking-tight sm:text-4xl">
-                    <Money amount={totalSpend} />
-                  </p>
-                  <p className="text-muted-foreground mt-1.5 text-xs">
-                    {expenses.length.toLocaleString("en-GB")}{" "}
-                    {expenses.length === 1 ? "transaction" : "transactions"} across {activeMonths}{" "}
-                    {activeMonths === 1 ? "month" : "months"}
-                  </p>
-                </div>
-                <Button
-                  asChild
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground hidden h-8 gap-1 text-xs sm:inline-flex"
-                >
-                  <Link href="/yearly-charts">
-                    Full analysis
-                    <ArrowUpRight className="size-3.5" />
-                  </Link>
-                </Button>
-              </div>
-
-              <div className="mt-6 flex-1">
+          <div className="grid gap-6 lg:grid-cols-3">
+            {/* ── Main column ───────────────────────────────────────────── */}
+            <div className="min-w-0 space-y-6 lg:col-span-2">
+              <Panel
+                title={`${year} at a glance`}
+                description={`${expenses.length.toLocaleString("en-GB")} ${expenses.length === 1 ? "transaction" : "transactions"} across ${activeMonths} ${activeMonths === 1 ? "month" : "months"}`}
+                action={<PanelLink href="/yearly-charts">Full analysis</PanelLink>}
+              >
+                <p className="-mt-2 mb-5 text-3xl font-semibold tracking-tight">
+                  <Money amount={totalSpend} />
+                </p>
                 <MonthBars focus={focus} lastStarted={lastStarted} totals={monthlyTotals} year={year} />
-              </div>
-
-              <dl className="mt-5 grid grid-cols-3 divide-x border-t pt-4">
-                <SummaryStat label="Monthly average">
-                  <Money amount={averageMonthlySpend} />
-                </SummaryStat>
-                <SummaryStat label="Avg. transaction">
-                  <Money amount={totalSpend / expenses.length} />
-                </SummaryStat>
-                <SummaryStat label="Top category">
-                  {topCategory ? (
-                    <span className="flex min-w-0 items-center gap-1.5">
-                      <span
-                        aria-hidden
-                        className="size-2 shrink-0 rounded-full"
-                        style={{ backgroundColor: getCategoryColor(topCategory.name) }}
-                      />
-                      <span className="truncate">{topCategory.name}</span>
-                      <span className="text-muted-foreground shrink-0 text-xs font-normal">
-                        {topShare.toFixed(0)}%
-                      </span>
+                <dl className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  <Stat label="Monthly average">
+                    <Money amount={averageMonthlySpend} />
+                  </Stat>
+                  <Stat label="Average expense">
+                    <Money amount={totalSpend / expenses.length} />
+                  </Stat>
+                  <Stat label="Biggest month">
+                    {MONTHS[monthlyTotals.indexOf(Math.max(...monthlyTotals))].slice(0, 3)}{" "}
+                    <span className="text-muted-foreground text-xs font-normal">
+                      <Money amount={Math.max(...monthlyTotals)} compact />
                     </span>
-                  ) : (
-                    "—"
-                  )}
-                </SummaryStat>
-              </dl>
-            </section>
+                  </Stat>
+                </dl>
+              </Panel>
 
-            <section
-              aria-labelledby="month-summary-title"
-              className="bg-card flex min-w-0 flex-col rounded-2xl p-5 shadow-md sm:p-6"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h2 id="month-summary-title" className="text-muted-foreground text-sm font-medium">
-                    {isCurrentMonth ? `${MONTHS[focus]} so far` : `${MONTHS[focus]} ${year}`}
-                  </h2>
-                  <p className="mt-1.5 text-3xl font-semibold tracking-tight">
-                    <Money amount={monthTotal} />
-                  </p>
+              <Panel
+                title="Recent activity"
+                description="Your latest expenses"
+                action={<PanelLink href="/expenses">View all</PanelLink>}
+              >
+                <div className="space-y-4">
+                  {recentByDay.map((day) => (
+                    <div key={day.label}>
+                      <h3 className="text-muted-foreground mb-1 text-xs font-semibold">{day.label}</h3>
+                      <ul className="-mx-2 divide-y">
+                        {day.expenses.map((expense) => {
+                          const category = expense.categoryName || "Uncategorized";
+                          const Icon = CATEGORY_ICONS_BY_NAME[category] ?? CircleHelp;
+                          return (
+                            <li key={expense.id} className="flex items-center justify-between gap-4 px-2 py-2.5">
+                              <div className="flex min-w-0 items-center gap-3">
+                                <span
+                                  className="flex size-9 shrink-0 items-center justify-center rounded-xl"
+                                  style={{
+                                    backgroundColor: `color-mix(in oklch, ${category === "Uncategorized" ? "var(--muted-foreground)" : getCategoryColor(category)} 16%, transparent)`,
+                                  }}
+                                >
+                                  <Icon className="text-foreground/80 size-4" aria-hidden />
+                                </span>
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-medium">
+                                    {expense.description || "Untitled expense"}
+                                  </p>
+                                  <p className="text-muted-foreground mt-0.5 truncate text-xs">
+                                    {category}
+                                    {expense.memberName ? ` · ${expense.memberName}` : ""}
+                                  </p>
+                                </div>
+                              </div>
+                              <Money amount={expense.amount} className="shrink-0 text-sm font-semibold" />
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  ))}
                 </div>
-                <span className="bg-muted text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-xl">
-                  <CalendarDays className="size-4" aria-hidden />
-                </span>
-              </div>
-              <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-1.5 text-xs">
-                {monthChange !== null ? (
-                  <>
-                    <Delta delta={{ goodDirection: "down", value: monthChange }} />
-                    <span>vs {MONTHS[focus - 1]}</span>
-                  </>
-                ) : (
-                  <span>
-                    {focus === 0 ? "First month of the year" : `No spending in ${MONTHS[focus - 1]} to compare`}
-                  </span>
-                )}
-              </div>
+              </Panel>
+            </div>
 
-              {/* Pushes the details to the bottom so both summary cards line up. */}
-              <div className="min-h-5 flex-1" aria-hidden />
-              <dl className="space-y-3 border-t pt-4 text-sm">
-                <MonthRow label="Transactions">{monthlyCounts[focus]}</MonthRow>
-                <MonthRow label="Daily average">
-                  <Money amount={dailyAverage} />
-                </MonthRow>
-                {projected !== null && (
-                  <MonthRow label="On pace for">
-                    <Money amount={projected} />
-                  </MonthRow>
-                )}
-                {largest && (
-                  <MonthRow label="Largest expense">
-                    <Money amount={largest.amount} />
-                    <span className="text-muted-foreground ml-1.5 text-xs font-normal">
-                      {largest.categoryName || "Uncategorized"}
-                    </span>
-                  </MonthRow>
-                )}
-              </dl>
-            </section>
-          </div>
-
-          {/* Recent + categories */}
-          <div className="grid gap-4 lg:grid-cols-3">
-            <Panel
-              className="lg:col-span-2"
-              title="Recent transactions"
-              description="Your latest recorded expenses"
-              action={
-                <Button asChild variant="ghost" size="sm" className="text-muted-foreground h-8 gap-1 text-xs">
-                  <Link href="/expenses">
-                    View all
-                    <ChevronRight className="size-3.5" />
-                  </Link>
-                </Button>
-              }
-            >
-              <ul className="-mx-2 divide-y">
-                {recentExpenses.map((expense) => {
-                  const category = expense.categoryName || "Uncategorized";
-                  const Icon = CATEGORY_ICONS_BY_NAME[category] ?? CircleHelp;
-                  return (
-                    <li key={expense.id} className="flex items-center justify-between gap-4 px-2 py-3">
-                      <div className="flex min-w-0 items-center gap-3">
-                        <span className="bg-muted text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-xl">
-                          <Icon className="size-4" aria-hidden />
-                        </span>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">
-                            {expense.description || "Untitled expense"}
-                          </p>
-                          <p className="text-muted-foreground mt-0.5 text-xs">
-                            {category} ·{" "}
-                            {parseLocalDate(expense.date).toLocaleDateString("en-GB", {
-                              day: "numeric",
-                              month: "short",
-                            })}
-                          </p>
+            {/* ── Side column ───────────────────────────────────────────── */}
+            <div className="min-w-0 space-y-6">
+              <Panel
+                title="Top categories"
+                description={`Where your money went in ${year}`}
+                action={categoryTotals.length > 5 ? <PanelLink href="/yearly-charts">See all</PanelLink> : undefined}
+              >
+                <ul className="space-y-4">
+                  {categoryTotals.slice(0, 5).map((category) => {
+                    const Icon = CATEGORY_ICONS_BY_NAME[category.name] ?? CircleHelp;
+                    const share = totalSpend > 0 ? (category.amount / totalSpend) * 100 : 0;
+                    const color =
+                      category.name === "Uncategorized" ? "var(--muted-foreground)" : getCategoryColor(category.name);
+                    return (
+                      <li key={category.name} className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-3 text-sm">
+                          <span className="flex min-w-0 items-center gap-2">
+                            <Icon className="text-muted-foreground size-3.5 shrink-0" aria-hidden />
+                            <span className="truncate font-medium">{category.name}</span>
+                            <span className="text-muted-foreground shrink-0 text-xs">{share.toFixed(0)}%</span>
+                          </span>
+                          <Money amount={category.amount} className="shrink-0 font-semibold" />
                         </div>
-                      </div>
-                      <Money amount={expense.amount} className="shrink-0 text-sm font-semibold" />
-                    </li>
-                  );
-                })}
-              </ul>
-            </Panel>
+                        <div className="bg-muted h-1.5 overflow-hidden rounded-full" aria-hidden>
+                          <div
+                            className="h-full rounded-full transition-[width] duration-700"
+                            style={{
+                              backgroundColor: color,
+                              width: `${maxCategory > 0 ? Math.max(0, (category.amount / maxCategory) * 100) : 0}%`,
+                            }}
+                          />
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </Panel>
 
-            <Panel
-              title="By category"
-              description="Where your money is going"
-              action={
-                categoryTotals.length > 6 ? (
-                  <Button asChild variant="ghost" size="sm" className="text-muted-foreground h-8 gap-1 text-xs">
-                    <Link href="/yearly-charts">
-                      See all
-                      <ChevronRight className="size-3.5" />
-                    </Link>
-                  </Button>
-                ) : undefined
-              }
-            >
-              <ul className="space-y-4">
-                {categoryTotals.slice(0, 6).map((category) => {
-                  const Icon = CATEGORY_ICONS_BY_NAME[category.name] ?? CircleHelp;
-                  const share = totalSpend > 0 ? (category.amount / totalSpend) * 100 : 0;
-                  const color =
-                    category.name === "Uncategorized"
-                      ? "var(--muted-foreground)"
-                      : getCategoryColor(category.name);
-                  return (
-                    <li key={category.name} className="space-y-1.5">
-                      <div className="flex items-center justify-between gap-3 text-sm">
-                        <span className="flex min-w-0 items-center gap-2">
-                          <Icon className="text-muted-foreground size-3.5 shrink-0" aria-hidden />
-                          <span className="truncate font-medium">{category.name}</span>
-                        </span>
-                        <span className="flex shrink-0 items-baseline gap-2 tabular-nums">
-                          <span className="text-muted-foreground text-xs">{share.toFixed(0)}%</span>
-                          <Money amount={category.amount} className="font-semibold" />
-                        </span>
-                      </div>
-                      <div className="bg-muted h-1.5 overflow-hidden rounded-full" aria-hidden>
-                        <div
-                          className="h-full rounded-full transition-[width] duration-700"
-                          style={{
-                            backgroundColor: color,
-                            width: `${maxCategory > 0 ? Math.max(0, (category.amount / maxCategory) * 100) : 0}%`,
-                          }}
-                        />
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </Panel>
+              <Panel title={monthLabel} description="This month in detail">
+                <dl className="space-y-3 text-sm">
+                  <DetailRow label="Transactions">{monthlyCounts[focus]}</DetailRow>
+                  <DetailRow label="Daily average">
+                    <Money amount={dailyAverage} />
+                  </DetailRow>
+                  {projected !== null && (
+                    <DetailRow label="On pace for">
+                      <Money amount={projected} />
+                    </DetailRow>
+                  )}
+                  {largest && (
+                    <DetailRow label="Largest expense">
+                      <Money amount={largest.amount} />
+                      <span className="text-muted-foreground ml-1.5 text-xs font-normal">
+                        {largest.categoryName || "Uncategorized"}
+                      </span>
+                    </DetailRow>
+                  )}
+                </dl>
+              </Panel>
+
+              {/* Asks the user a question — answers come from their own data. */}
+              <section className="bg-primary/8 min-w-0 rounded-2xl p-4 sm:p-5">
+                <h2 className="flex items-center gap-2 text-sm font-semibold">
+                  <MessagesSquare className="text-primary size-4" aria-hidden />
+                  What would you like to know?
+                </h2>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {MONEY_QUESTIONS.slice(0, 3).map((q) => (
+                    <button
+                      key={q}
+                      type="button"
+                      onClick={() => openHelp(q)}
+                      className="bg-card hover:bg-muted focus-visible:ring-ring rounded-full border px-3 py-1.5 text-left text-xs transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+                <Link
+                  href="/help"
+                  className="text-muted-foreground hover:text-foreground mt-3 inline-flex items-center gap-1 text-xs"
+                >
+                  Help &amp; FAQs
+                  <ArrowUpRight className="size-3" aria-hidden />
+                </Link>
+              </section>
+            </div>
           </div>
 
           {/* AI insights */}
           <AIInsightsPanel />
-
-          {/* Quick actions */}
-          <section aria-label="Quick actions" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
-            {QUICK_ACTIONS.map(({ hint, href, icon: Icon, label }) => (
-              <Link
-                key={label}
-                href={href}
-                className="group bg-card hover:bg-muted/40 flex items-center gap-3 rounded-2xl p-4 shadow-md transition-colors"
-              >
-                <span className="bg-muted text-foreground flex size-10 shrink-0 items-center justify-center rounded-xl">
-                  <Icon className="size-4" aria-hidden />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium">{label}</span>
-                  <span className="text-muted-foreground block truncate text-xs">{hint}</span>
-                </span>
-                <ChevronRight
-                  className="text-muted-foreground hidden size-4 shrink-0 transition-transform group-hover:translate-x-0.5 sm:block"
-                  aria-hidden
-                />
-              </Link>
-            ))}
-          </section>
         </>
       )}
     </div>

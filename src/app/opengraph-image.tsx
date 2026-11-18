@@ -13,7 +13,7 @@ export default function OpengraphImage() {
     (
       <div
         style={{
-          background: "linear-gradient(150deg, #6d5df8 0%, #4b3be0 45%, #1f1580 100%)",
+          background: "linear-gradient(150deg, #009689 0%, #00746d 45%, #002f30 100%)",
           color: "white",
           display: "flex",
           flexDirection: "column",

@@ -6,6 +6,7 @@ import { ArrowDownLeft, ArrowUpRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { DatePicker } from "@/components/shared/DatePicker";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -166,7 +167,7 @@ function IouForm({
               <FormItem>
                 <FormLabel>Date</FormLabel>
                 <FormControl>
-                  <Input type="date" {...field} />
+                  <DatePicker value={field.value} onChange={field.onChange} onBlur={field.onBlur} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -179,7 +180,14 @@ function IouForm({
               <FormItem>
                 <FormLabel>Pay back by (optional)</FormLabel>
                 <FormControl>
-                  <Input type="date" {...field} />
+                  <DatePicker
+                    clearable
+                    placeholder="No due date"
+                    presets={false}
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

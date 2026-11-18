@@ -1,21 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import {
-  BellRinging,
-  CircleNotch,
-  Compass,
-  Database,
-  ListChecks,
-  LockKey,
-  MagnifyingGlass,
-  SignOut,
-  Target,
-  UserCircle,
-} from "@phosphor-icons/react";
+import { CircleNotch, Compass, Lifebuoy, ListChecks, SignOut, UserCircle } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { useHelp } from "@/components/help/HelpCenter";
 import { startRouteProgress } from "@/components/layout/RouteProgress";
 import { useEngagement } from "@/components/onboarding/EngagementProvider";
 import { displayNameOf, useCurrentUser } from "@/components/providers/context/CurrentUserContext";
@@ -26,7 +16,6 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { createClient } from "@/utils/supabase/client";
@@ -39,6 +28,7 @@ export function AccountMenu() {
   const user = useCurrentUser();
   const router = useRouter();
   const engagement = useEngagement();
+  const { openHelp } = useHelp();
   const [signingOut, setSigningOut] = useState(false);
   if (!user?.email) return null;
 
@@ -71,10 +61,10 @@ export function AccountMenu() {
           aria-label={`Account menu for ${name}`}
           className="focus-visible:ring-ring ring-offset-background rounded-full transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none data-[state=open]:scale-105"
         >
-          <UserAvatar name={name} seed={user.avatarSeed} size={36} className="ring-border ring-1" />
+          <UserAvatar name={name} seed={user.avatarSeed} size={34} className="ring-border ring-1" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" sideOffset={10} className="w-64 rounded-xl p-1.5">
+      <DropdownMenuContent align="end" sideOffset={10} className="w-60 rounded-xl p-1.5">
         <DropdownMenuLabel className="flex items-center gap-2.5 px-2 py-2 font-normal">
           <UserAvatar name={name} seed={user.avatarSeed} size={36} />
           <span className="grid min-w-0 leading-tight">
@@ -83,30 +73,17 @@ export function AccountMenu() {
           </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        {/* Password, data, reminders and appearance are tabs inside Profile. */}
         <DropdownMenuItem onSelect={() => go("/profile")}>
           <UserCircle aria-hidden />
           Profile &amp; settings
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => go("/plan")}>
-          <Target aria-hidden />
-          Savings plan
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => go("/profile?tab=security")}>
-          <LockKey aria-hidden />
-          Password &amp; security
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => go("/profile?tab=data")}>
-          <Database aria-hidden />
-          Sample data &amp; export
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => go("/profile?tab=preferences")}>
-          <BellRinging aria-hidden />
-          Reminders &amp; tips
+        <DropdownMenuItem onSelect={() => openHelp()}>
+          <Lifebuoy aria-hidden />
+          Help &amp; questions
         </DropdownMenuItem>
         {engagement.enabled && (
           <>
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-muted-foreground text-xs font-medium">Getting started</DropdownMenuLabel>
             <DropdownMenuItem onSelect={engagement.startTour}>
               <Compass aria-hidden />
               Take the tour
@@ -117,12 +94,6 @@ export function AccountMenu() {
             </DropdownMenuItem>
           </>
         )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={openSearch}>
-          <MagnifyingGlass aria-hidden />
-          Search
-          <DropdownMenuShortcut>⌘K</DropdownMenuShortcut>
-        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           variant="destructive"

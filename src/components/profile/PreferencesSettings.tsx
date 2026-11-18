@@ -4,11 +4,10 @@ import { useSyncExternalStore } from "react";
 import { Check, Globe, Keyboard, Monitor, Moon, Palette, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 
-import { LOCALE_CONFIG } from "@/lib/config";
+import { CurrencySettings } from "@/components/currency/CurrencyTools";
 import { cn } from "@/lib/utils";
 
-import { NotificationSettings } from "./NotificationSettings";
-import { DetailRow, SettingsCard } from "./SettingsCard";
+import { SettingsCard } from "./SettingsCard";
 
 const THEMES = [
   { icon: Sun, label: "Light", value: "light" },
@@ -18,6 +17,7 @@ const THEMES = [
 
 const SHORTCUTS = [
   { keys: ["⌘", "K"], label: "Search and jump to any page" },
+  { keys: ["?"], label: "Open help from anywhere" },
   { keys: ["Tab"], label: "Move through links and buttons" },
   { keys: ["Esc"], label: "Close dialogs and menus" },
 ];
@@ -60,9 +60,9 @@ export function PreferencesSettings() {
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
 
   return (
-    <div className="grid gap-4 lg:grid-cols-3">
+    <div className="grid gap-4 xl:grid-cols-3">
       <SettingsCard
-        className="lg:col-span-2"
+        className="xl:col-span-2"
         icon={Palette}
         title="Appearance"
         description="Choose how the app looks on this device."
@@ -98,24 +98,12 @@ export function PreferencesSettings() {
         </div>
       </SettingsCard>
 
-      <SettingsCard icon={Globe} title="Region" description="Formats used for money and dates.">
-        <dl className="divide-y">
-          <DetailRow label="Currency">
-            Pound sterling ({LOCALE_CONFIG.symbol})
-          </DetailRow>
-          <DetailRow label="Format">English (UK)</DetailRow>
-          <DetailRow label="Example">
-            <span className="tabular-nums">
-              {new Intl.NumberFormat(LOCALE_CONFIG.locale, { currency: LOCALE_CONFIG.currency, style: "currency" }).format(1234.5)}
-            </span>
-          </DetailRow>
-        </dl>
+      <SettingsCard icon={Globe} title="Currency & region" description="The currency the whole app uses, on this device.">
+        <CurrencySettings />
       </SettingsCard>
 
-      <NotificationSettings className="lg:col-span-3" />
-
-      <SettingsCard className="lg:col-span-3" icon={Keyboard} title="Keyboard shortcuts" description="Move around faster.">
-        <ul className="grid gap-2 sm:grid-cols-3">
+      <SettingsCard className="xl:col-span-3" icon={Keyboard} title="Keyboard shortcuts" description="Move around faster.">
+        <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
           {SHORTCUTS.map(({ keys, label }) => (
             <li key={label} className="bg-muted/40 flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-sm">
               <span className="text-muted-foreground">{label}</span>

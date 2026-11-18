@@ -153,7 +153,10 @@ function Wizard({
         monthlySavingsGoal: asMoney(saving),
       });
       writePrefs({ dailyReminder: reminder, reminderTime, tips });
-      result.warnings.forEach((w) => toast.warning("Almost there", { description: w, duration: 9000 }));
+      // One pop-up, however many parts needed attention.
+      if (result.warnings.length > 0) {
+        toast.warning("Almost there", { description: result.warnings.join(" "), duration: 9000, id: "setup-warnings" });
+      }
       setDone(true);
     } catch (err) {
       setError(apiErrorMessage(err));
@@ -191,12 +194,12 @@ function Wizard({
           </dl>
         )}
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
-          <Button className="gap-1.5" onClick={() => onFinish({ name: firstName, tour: true })}>
+          <Button className="gap-1.5" autoFocus onClick={() => onFinish({ name: firstName, tour: true })}>
             <Compass className="size-4" aria-hidden />
-            Take a 1-minute tour
+            Show me around
           </Button>
-          <Button variant="outline" onClick={() => onFinish({ name: firstName, tour: false })}>
-            Go to my dashboard
+          <Button variant="ghost" className="text-muted-foreground" onClick={() => onFinish({ name: firstName, tour: false })}>
+            Skip tour
           </Button>
         </div>
       </div>

@@ -27,6 +27,6 @@ export const SITE = {
   name: "Daily Expenses",
   /** Short headline for titles and share cards. */
   tagline: "Spending, savings and who owes who — in one place",
-  themeColor: { dark: "#0c0d1f", light: "#faf9ff" },
+  themeColor: { dark: "#0a0f12", light: "#f7fbfb" },
   url: (fromEnv || (vercel ? `https://${vercel}` : "http://localhost:3001")).replace(/\/+$/, ""),
 } as const;

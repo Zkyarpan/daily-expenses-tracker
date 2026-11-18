@@ -7,16 +7,19 @@ import {
   Camera,
   CaretDown,
   Gift,
+  Lifebuoy,
   List,
   MagnifyingGlass,
   Plus,
   Receipt,
+  UploadSimple,
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { AlertsPanel } from "@/components/alerts/AlertsPanel";
 import { Logo } from "@/components/brand/Logo";
+import { useHelp } from "@/components/help/HelpCenter";
 import { useQuickAdd } from "@/components/money/QuickAddProvider";
 import { useAlerts } from "@/components/providers/context/AlertsContext";
 import { Button } from "@/components/ui/button";
@@ -24,7 +27,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -34,11 +36,9 @@ import { cn } from "@/lib/utils";
 
 import { AccountMenu, openSearch } from "./AccountMenu";
 import { CommandPalette } from "./CommandPalette";
-import { isRouteActive, NAV_GROUPS, type NavGroup } from "./navigation";
-import { ModeToggle } from "./ThemeButton";
-
-/** Shared layout width, so the bar lines up with page content and the footer. */
-export const SHELL_WIDTH = "mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8";
+import { isItemActive, NAV_GROUPS, type NavGroup, tourId } from "./navigation";
+import { BAR_ICON_BUTTON, SHELL_WIDTH } from "./styles";
+import { ModeToggle, ThemeMenuRow } from "./ThemeButton";
 
 function AlertsBell() {
   const { alerts, unreadCount, markAsRead, markAllAsRead, dismiss, dismissAll } = useAlerts();
@@ -56,19 +56,18 @@ function AlertsBell() {
 
 const linkClass = (active: boolean) =>
   cn(
-    "focus-visible:ring-ring relative inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none",
+    "focus-visible:ring-ring relative inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:outline-none",
     active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground",
   );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Desktop: direct links and dropdown menus (open on hover or click)
+// Desktop: direct links plus one small "More" menu (opens on hover or click)
 // ─────────────────────────────────────────────────────────────────────────────
 
 function NavMenu({ group, pathname }: { group: NavGroup; pathname: string }) {
   const [open, setOpen] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const active = group.items.some((item) => isRouteActive(pathname, item.url));
-  const wide = group.items.length > 4;
+  const active = group.items.some((item) => isItemActive(pathname, item));
 
   const clear = () => {
     if (timer.current) clearTimeout(timer.current);
@@ -103,24 +102,24 @@ function NavMenu({ group, pathname }: { group: NavGroup; pathname: string }) {
         sideOffset={10}
         onPointerEnter={openNow}
         onPointerLeave={closeSoon}
-        className={cn("rounded-2xl p-2", wide ? "grid w-[34rem] grid-cols-2 gap-1" : "w-80")}
+        className="w-72 rounded-2xl p-1.5"
       >
         {group.items.map((item) => {
-          const current = isRouteActive(pathname, item.url);
+          const current = isItemActive(pathname, item);
           return (
-            <DropdownMenuItem key={item.url} asChild className="cursor-pointer rounded-xl p-2.5">
-              <Link href={item.url} aria-current={current ? "page" : undefined} className="flex items-start gap-3">
+            <DropdownMenuItem key={item.url} asChild className="cursor-pointer rounded-xl p-2">
+              <Link href={item.url} aria-current={current ? "page" : undefined} className="flex items-center gap-3">
                 <span
                   className={cn(
-                    "flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors",
+                    "flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors",
                     current ? "bg-primary text-primary-foreground" : "bg-muted text-foreground",
                   )}
                 >
-                  <item.icon size={18} weight={current ? "fill" : "regular"} aria-hidden />
+                  <item.icon size={16} weight={current ? "fill" : "regular"} aria-hidden />
                 </span>
                 <span className="min-w-0">
                   <span className={cn("block text-sm font-medium", current && "text-primary")}>{item.title}</span>
-                  <span className="text-muted-foreground block text-xs leading-5">{item.hint}</span>
+                  <span className="text-muted-foreground block truncate text-xs">{item.hint}</span>
                 </span>
               </Link>
             </DropdownMenuItem>
@@ -133,13 +132,13 @@ function NavMenu({ group, pathname }: { group: NavGroup; pathname: string }) {
 
 function DesktopNav({ pathname }: { pathname: string }) {
   return (
-    <nav aria-label="Main" className="hidden items-center gap-1 lg:flex">
+    <nav aria-label="Main" className="hidden items-center gap-0.5 lg:flex">
       {NAV_GROUPS.map((group) =>
         group.display === "menu" ? (
           <NavMenu key={group.label} group={group} pathname={pathname} />
         ) : (
           group.items.map((item) => {
-            const active = isRouteActive(pathname, item.url);
+            const active = isItemActive(pathname, item);
             const featured = item.url === "/assistant";
             return (
               <Link
@@ -147,11 +146,10 @@ function DesktopNav({ pathname }: { pathname: string }) {
                 href={item.url}
                 aria-current={active ? "page" : undefined}
                 className={linkClass(active)}
-                data-tour={featured ? "ask-ai" : undefined}
+                data-tour={tourId(item.url)}
               >
                 {featured && <item.icon size={15} weight="fill" className={active ? "" : "text-primary"} aria-hidden />}
                 {item.title}
-                {featured && !active && <span className="bg-highlight size-1.5 rounded-full" aria-hidden />}
               </Link>
             );
           })
@@ -162,26 +160,27 @@ function DesktopNav({ pathname }: { pathname: string }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Mobile: full menu in a sheet
+// Mobile: the same pages in a sheet
 // ─────────────────────────────────────────────────────────────────────────────
 
 function MobileNav({ pathname }: { pathname: string }) {
   const [open, setOpen] = useState(false);
+  const { openHelp } = useHelp();
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="size-9 lg:hidden" aria-label="Open menu" data-tour="menu">
+        <Button variant="ghost" size="icon" className={cn(BAR_ICON_BUTTON, "lg:hidden")} aria-label="Open menu" data-tour="menu">
           <List size={20} weight="bold" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-[19rem] overflow-y-auto p-0">
+      <SheetContent side="left" className="w-[min(20rem,86vw)] gap-0 overflow-y-auto p-0">
         <SheetHeader className="border-b px-5 py-4">
           <SheetTitle className="flex items-center">
-            <Logo className="size-10" />
+            <Logo className="size-9" />
           </SheetTitle>
           <SheetDescription className="sr-only">Main navigation</SheetDescription>
         </SheetHeader>
-        <nav aria-label="Main" className="space-y-5 px-3 py-4">
+        <nav aria-label="Main" className="space-y-4 px-3 py-4">
           {NAV_GROUPS.map((group) => (
             <div key={group.label}>
               {group.display === "menu" && (
@@ -189,7 +188,7 @@ function MobileNav({ pathname }: { pathname: string }) {
               )}
               <ul className="space-y-0.5">
                 {group.items.map((item) => {
-                  const active = isRouteActive(pathname, item.url);
+                  const active = isItemActive(pathname, item);
                   return (
                     <li key={item.url}>
                       <Link
@@ -197,7 +196,7 @@ function MobileNav({ pathname }: { pathname: string }) {
                         onClick={() => setOpen(false)}
                         aria-current={active ? "page" : undefined}
                         className={cn(
-                          "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                          "flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
                           active ? "bg-primary/10 text-primary" : "hover:bg-muted",
                         )}
                       >
@@ -211,6 +210,32 @@ function MobileNav({ pathname }: { pathname: string }) {
             </div>
           ))}
         </nav>
+        {/* On phones the theme switch lives here instead of the top bar. */}
+        <div className="mt-auto space-y-0.5 border-t px-3 py-3">
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              openSearch();
+            }}
+            className="hover:bg-muted flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors"
+          >
+            <MagnifyingGlass size={18} aria-hidden />
+            Search
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              openHelp();
+            }}
+            className="hover:bg-muted flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors"
+          >
+            <Lifebuoy size={18} aria-hidden />
+            Help &amp; questions
+          </button>
+          <ThemeMenuRow />
+        </div>
       </SheetContent>
     </Sheet>
   );
@@ -228,13 +253,12 @@ function QuickAddMenu() {
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <Button size="sm" className="h-9 gap-1.5 px-3.5 shadow-sm" aria-label="Add new" data-tour="new">
+        <Button size="sm" className="h-9 min-w-9 gap-1.5 px-2.5 shadow-sm sm:px-3.5" aria-label="Add new" data-tour="new">
           <Plus size={15} weight="bold" aria-hidden />
           <span className="hidden sm:inline">New</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" sideOffset={10} className="w-64 rounded-xl p-1.5">
-        <DropdownMenuLabel className="text-muted-foreground text-xs font-medium">Add</DropdownMenuLabel>
+      <DropdownMenuContent align="end" sideOffset={10} className="w-60 rounded-xl p-1.5">
         <DropdownMenuItem onSelect={openExpense}>
           <Receipt aria-hidden />
           Expense
@@ -246,24 +270,27 @@ function QuickAddMenu() {
               Scan a receipt
               <span className="bg-highlight text-highlight-foreground ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-semibold">AI</span>
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => openIou({ direction: "lent" })}>
               <ArrowUpRight aria-hidden />
               Money I lent
-              <span className="text-muted-foreground ml-auto text-xs">they owe me</span>
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => openIou({ direction: "borrowed" })}>
               <ArrowDownLeft aria-hidden />
               Money I borrowed
-              <span className="text-muted-foreground ml-auto text-xs">I owe</span>
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => openWishlist()}>
               <Gift aria-hidden />
               Wishlist item
             </DropdownMenuItem>
           </>
         )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/import-expenses">
+            <UploadSimple aria-hidden />
+            Import a statement
+          </Link>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -278,7 +305,7 @@ function SearchButton() {
         onClick={openSearch}
         aria-label="Search and jump to a page (⌘K)"
         data-tour="search"
-        className="text-muted-foreground hover:text-foreground hidden h-9 w-52 justify-start gap-2 rounded-full px-3 text-sm font-normal xl:inline-flex"
+        className="text-muted-foreground hover:text-foreground hidden h-9 w-48 justify-start gap-2 rounded-full border px-3 text-sm font-normal xl:inline-flex"
       >
         <MagnifyingGlass size={15} weight="bold" className="shrink-0" aria-hidden />
         <span className="truncate">Search…</span>
@@ -286,8 +313,8 @@ function SearchButton() {
           ⌘K
         </kbd>
       </Button>
-      <Button variant="ghost" size="icon" onClick={openSearch} aria-label="Search (⌘K)" className="size-9 xl:hidden" data-tour="search">
-        <MagnifyingGlass size={17} weight="bold" aria-hidden />
+      <Button variant="ghost" size="icon" onClick={openSearch} aria-label="Search (⌘K)" className={cn(BAR_ICON_BUTTON, "xl:hidden")} data-tour="search">
+        <MagnifyingGlass size={18} weight="bold" aria-hidden />
       </Button>
     </>
   );
@@ -297,81 +324,55 @@ function SearchButton() {
 // Bar
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Slides the bar away while you scroll down to read, and back as soon as you
- * scroll up. Stays put near the top, while a menu is open, while it has
- * keyboard focus, and during the app tour.
- */
-function useHideOnScroll(header: React.RefObject<HTMLElement | null>) {
-  const [hidden, setHidden] = useState(false);
-
+/** True once the page has scrolled, to give the pinned bar a soft shadow. */
+function useScrolled() {
+  const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
-    let last = window.scrollY;
-    let frame = 0;
-    const onScroll = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        const y = window.scrollY;
-        const delta = y - last;
-        const el = header.current;
-        const pinned =
-          y < 96 ||
-          document.body.dataset.tourActive === "true" ||
-          Boolean(el?.querySelector('[data-state="open"]')) ||
-          Boolean(el?.contains(document.activeElement) && document.activeElement !== document.body);
-        if (pinned || delta < -8) setHidden(false);
-        else if (delta > 8) setHidden(true);
-        if (Math.abs(delta) > 8) last = y;
-      });
-    };
+    const onScroll = () => setScrolled(window.scrollY > 4);
+    onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      cancelAnimationFrame(frame);
-    };
-  }, [header]);
-
-  return [hidden, setHidden] as const;
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  return scrolled;
 }
 
+/** Top bar, pinned to the top of the window at all times. */
 const Navbar = () => {
   const pathname = usePathname();
-  const headerRef = useRef<HTMLElement>(null);
-  const [hidden, setHidden] = useHideOnScroll(headerRef);
+  const scrolled = useScrolled();
 
   return (
     <header
-      ref={headerRef}
       aria-label="Application header"
-      data-hidden={hidden || undefined}
-      // Tabbing into a hidden bar brings it back.
-      onFocusCapture={() => setHidden(false)}
       className={cn(
-        "bg-card/95 supports-[backdrop-filter]:bg-card/85 sticky top-0 z-40 border-b backdrop-blur-xl transition-transform duration-300 ease-out motion-reduce:transition-none print:hidden",
-        hidden && "-translate-y-full",
+        // Solid on phones: a backdrop blur on a sticky bar makes scrolling janky
+        // on low-end devices. Frosted glass from sm up.
+        "bg-card sm:supports-[backdrop-filter]:bg-card/80 sticky top-0 z-40 border-b transition-shadow duration-200 sm:backdrop-blur-xl print:hidden",
+        scrolled && "shadow-sm",
       )}
     >
-      <div className={cn(SHELL_WIDTH, "flex h-16 items-center gap-2")}>
+      <div className={cn(SHELL_WIDTH, "flex h-14 items-center gap-1.5 sm:h-16 sm:gap-2")}>
         <MobileNav pathname={pathname} />
         <Link
           href="/"
           data-tour="home"
-          className="focus-visible:ring-ring mr-2 rounded-[12px] transition-transform hover:scale-[1.04] focus-visible:ring-2 focus-visible:outline-none lg:mr-4"
+          aria-label="Home"
+          className="focus-visible:ring-ring mr-1 shrink-0 rounded-[12px] transition-transform hover:scale-[1.04] focus-visible:ring-2 focus-visible:outline-none lg:mr-3"
         >
-          <Logo className="size-10" />
+          <Logo className="size-8 sm:size-9" />
         </Link>
         <DesktopNav pathname={pathname} />
 
         <CommandPalette />
 
-        <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
+        <div className="ml-auto flex items-center gap-0.5 sm:gap-1.5">
           <QuickAddMenu />
           <SearchButton />
           <span className="flex" data-tour="alerts">
             <AlertsBell />
           </span>
-          <ModeToggle />
-          <span className="flex" data-tour="account">
+          <ModeToggle className="hidden sm:inline-flex" />
+          <span className="ml-0.5 flex sm:ml-1" data-tour="account">
             <AccountMenu />
           </span>
         </div>

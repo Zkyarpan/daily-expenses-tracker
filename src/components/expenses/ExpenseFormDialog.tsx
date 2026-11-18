@@ -20,6 +20,7 @@ import { useState } from "react";
 import { CircleHelp, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
+import { DatePicker } from "@/components/shared/DatePicker";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -294,17 +295,15 @@ function ExpenseForm({
                 </Button>
               ))}
               <div className="relative min-w-[150px] flex-1">
-                <Input
+                <DatePicker
                   id="exp-date"
-                  type="date"
                   value={date}
                   aria-invalid={!!dateError}
-                  onChange={(e) => {
-                    setDate(e.target.value);
-                    setDateError(undefined);
+                  presets={false}
+                  onChange={(value) => {
+                    setDate(value);
+                    setDateError(validateDate(value));
                   }}
-                  onBlur={() => setDateError(validateDate(date))}
-                  className="[color-scheme:light] dark:[color-scheme:dark]"
                   disabled={saving}
                 />
               </div>

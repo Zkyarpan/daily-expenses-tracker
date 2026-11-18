@@ -17,6 +17,7 @@ import Link from "next/link";
 
 import { DataTable } from "@/app/(protected)/expenses/data-table";
 import { expensesData } from "@/components/expenses/data/expenseData";
+import { ExpenseMobileRow } from "@/components/expenses/ExpenseMobileRow";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { YearlyChartsPageSkeleton } from "@/components/shared/PageSkeletons";
@@ -336,8 +337,14 @@ const YearlyChartsPage = () => {
               />
             </button>
             {showTable && (
-              <div id="yearly-expenses-table" className="border-t px-5 pt-4 pb-5 sm:px-6">
-                <DataTable columns={columns} data={filteredYearExpenses} isReadOnly embedded />
+              <div id="yearly-expenses-table" className="border-t px-4 pt-4 pb-5 sm:px-6">
+                <DataTable
+                  columns={columns}
+                  data={filteredYearExpenses}
+                  isReadOnly
+                  embedded
+                  renderMobileRow={(row) => <ExpenseMobileRow key={row.id} expense={row.original} />}
+                />
               </div>
             )}
           </section>

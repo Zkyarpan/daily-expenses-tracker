@@ -71,9 +71,10 @@ export function StatCard({
     <Card className={cn("gap-0 py-0", className)}>
       <div className="flex h-full flex-col gap-2.5 p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
-          <div className="text-muted-foreground text-sm font-medium">{label}</div>
+          <div className="text-muted-foreground min-w-0 text-[13px] leading-5 font-medium sm:text-sm">{label}</div>
+          {/* Decorative: hidden in two-up phone grids so the label has room. */}
           {Icon && (
-            <span className="bg-muted text-muted-foreground -mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg">
+            <span className="bg-muted text-muted-foreground -mt-0.5 hidden size-8 shrink-0 items-center justify-center rounded-lg min-[26rem]:flex">
               <Icon aria-hidden className="size-4" />
             </span>
           )}
@@ -100,7 +101,7 @@ export function StatCardSkeleton({ className }: { className?: string }) {
       <div className="flex flex-col gap-3 p-4 sm:p-5">
         <div className="flex items-start justify-between">
           <Skeleton className="h-4 w-24" />
-          <Skeleton className="size-8 rounded-lg" />
+          <Skeleton className="hidden size-8 rounded-lg min-[26rem]:block" />
         </div>
         <Skeleton className="h-7 w-32" />
         <Skeleton className="h-3.5 w-40 max-w-full" />

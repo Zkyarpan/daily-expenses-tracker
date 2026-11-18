@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { amountText, MoneyInput, optionalAmountText, QuickAmounts, toAmountText } from "@/components/money/fields";
+import { DatePicker } from "@/components/shared/DatePicker";
 import { Money } from "@/components/shared/Money";
 import { Button } from "@/components/ui/button";
 import {
@@ -326,7 +327,15 @@ function GoalForm({ goal, onDone, today }: { goal?: SavingsGoal; onDone: () => v
             <FormItem>
               <FormLabel>Reach it by (optional)</FormLabel>
               <FormControl>
-                <Input type="date" min={today} {...field} />
+                <DatePicker
+                  clearable
+                  min={today}
+                  placeholder="No date"
+                  presets={false}
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                />
               </FormControl>
               <FormDescription>With a date, the plan works out how much to put aside each month.</FormDescription>
               <FormMessage />

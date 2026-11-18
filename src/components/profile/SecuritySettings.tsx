@@ -384,7 +384,7 @@ function ActivityCard() {
               <Skeleton className="size-8 rounded-lg" />
               <div className="flex-1 space-y-1.5">
                 <Skeleton className="h-3.5 w-40 rounded-full" />
-                <Skeleton className="h-3 w-56 rounded-full" />
+                <Skeleton className="h-3 w-56 max-w-full rounded-full" />
               </div>
             </li>
           ))}

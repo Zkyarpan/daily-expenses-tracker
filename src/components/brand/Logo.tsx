@@ -3,8 +3,8 @@ import { useId } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * The brand mark, used on its own (no wordmark): an indigo-violet tile with a
- * coin, a tick inside it ("money on track") and a lime spark for the app's
+ * The brand mark, used on its own (no wordmark): a deep-teal tile with a
+ * coin, a tick inside it ("money on track") and a gold spark for the app's
  * smart/AI features. Drawn on a 32-unit grid so it stays crisp from 16 px
  * (favicon) upwards. The same artwork is in src/app/icon.svg.
  *
@@ -27,9 +27,9 @@ export function LogoMark({ className, title }: { className?: string; title?: str
     >
       <defs>
         <linearGradient id={bg} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#8E7DFF" />
-          <stop offset="0.5" stopColor="#5B4BF5" />
-          <stop offset="1" stopColor="#3424C4" />
+          <stop offset="0" stopColor="#2BC4AE" />
+          <stop offset="0.5" stopColor="#00877C" />
+          <stop offset="1" stopColor="#004A4B" />
         </linearGradient>
         <radialGradient id={shine} cx="0.2" cy="0.1" r="0.75">
           <stop offset="0" stopColor="#fff" stopOpacity="0.28" />
@@ -44,7 +44,7 @@ export function LogoMark({ className, title }: { className?: string; title?: str
       {/* Tick: money on track */}
       <path d="M10.7 18.3l2.4 2.4 4.6-4.9" fill="none" stroke="#fff" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" />
       {/* Spark */}
-      <path d="M23.1 3.4c.5 3.3 2 4.8 5.3 5.3-3.3.5-4.8 2-5.3 5.3-.5-3.3-2-4.8-5.3-5.3 3.3-.5 4.8-2 5.3-5.3z" fill="#C8F542" />
+      <path d="M23.1 3.4c.5 3.3 2 4.8 5.3 5.3-3.3.5-4.8 2-5.3 5.3-.5-3.3-2-4.8-5.3-5.3 3.3-.5 4.8-2 5.3-5.3z" fill="#F9D04F" />
     </svg>
   );
 }

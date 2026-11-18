@@ -63,10 +63,13 @@ function SampleDataCard() {
     loadSampleData.mutate(undefined, {
       onError: (error) => toast.error("Sample data could not be loaded", { description: apiErrorMessage(error) }),
       onSuccess: ({ counts: added, warnings }) => {
-        toast.success("Sample data loaded", {
-          description: `${plural(added.expenses, "expense")}, ${plural(added.budgets, "budget")}, ${plural(added.trackers, "tracker")}, ${plural(added.ious, "IOU")} and ${plural(added.wishlist, "wishlist item")} added. Explore any page to try it out.`,
-        });
-        warnings.forEach((w) => toast.warning(w));
+        const summary = `${plural(added.expenses, "expense")}, ${plural(added.budgets, "budget")}, ${plural(added.trackers, "tracker")}, ${plural(added.ious, "IOU")} and ${plural(added.wishlist, "wishlist item")} added.`;
+        // One pop-up: any warnings ride along with the result instead of stacking.
+        if (warnings.length > 0) {
+          toast.warning("Sample data partly loaded", { description: `${summary} ${warnings.join(" ")}`, duration: 9000 });
+        } else {
+          toast.success("Sample data loaded", { description: `${summary} Explore any page to try it out.` });
+        }
       },
     });
 

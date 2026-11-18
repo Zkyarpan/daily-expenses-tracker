@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarCheck, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +20,10 @@ interface MonthYearSelectorProps {
   onMonthYearChange: (month: number, year: number) => void;
 }
 
+/**
+ * ‹ Month Year › Today. One row at every width: on phones it fills the row,
+ * the month select stretches, and "Today" becomes an icon.
+ */
 const MonthYearSelector = ({
   currentMonth,
   currentYear,
@@ -51,21 +55,27 @@ const MonthYearSelector = ({
     onMonthYearChange(currentMonth, year);
   };
 
+  const label = months[currentMonth];
+
   return (
-    // flex-wrap: on narrow screens "Today" moves to a new line instead of overflowing.
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex w-full min-w-0 items-center gap-1.5 sm:w-auto sm:gap-2">
       <Button
         variant="outline"
         size="icon"
         onClick={handlePrevious}
-        className="h-8 w-8"
+        className="size-9 shrink-0"
+        aria-label="Previous month"
       >
-        <ChevronLeft className="h-4 w-4" />
+        <ChevronLeft className="size-4" />
       </Button>
 
       <Select value={currentMonth.toString()} onValueChange={handleMonthChange}>
-        <SelectTrigger className="h-8 w-32">
-          <SelectValue>{months[currentMonth]}</SelectValue>
+        <SelectTrigger aria-label="Month" className="min-w-0 flex-1 px-2.5 sm:w-32 sm:flex-none sm:px-3">
+          <SelectValue>
+            {/* Narrow phones get "Sep" so the row never wraps or cuts off. */}
+            <span className="min-[24rem]:hidden">{label.slice(0, 3)}</span>
+            <span className="hidden min-[24rem]:inline">{label}</span>
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           {months.map((month, index) => (
@@ -80,28 +90,32 @@ const MonthYearSelector = ({
         value={currentYear}
         onValueChange={handleYearChange}
         range={10}
-        triggerClassName="h-8 w-24"
+        triggerClassName="w-[5rem] shrink-0 px-2.5 sm:w-24 sm:px-3"
       />
 
       <Button
         variant="outline"
         size="icon"
         onClick={handleNext}
-        className="h-8 w-8"
+        className="size-9 shrink-0"
+        aria-label="Next month"
       >
-        <ChevronRight className="h-4 w-4" />
+        <ChevronRight className="size-4" />
       </Button>
 
       <Button
         variant="ghost"
-        size="sm"
         onClick={() => {
           const now = new Date();
           onMonthYearChange(now.getMonth(), now.getFullYear());
         }}
-        className="h-8"
+        // Hidden on the very narrowest phones (320px) so the month stays readable.
+        className="size-9 shrink-0 px-0 max-[22rem]:hidden sm:h-9 sm:w-auto sm:px-3"
+        aria-label="Go to this month"
+        title="Today"
       >
-        Today
+        <CalendarCheck className="size-4 sm:hidden" aria-hidden />
+        <span className="hidden sm:inline">Today</span>
       </Button>
     </div>
   );

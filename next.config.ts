@@ -8,9 +8,9 @@ const isTurbopack = process.env.TURBOPACK === "1" ||
   process.argv.some((a) => a === "--turbopack");
 
 const nextConfig: NextConfig = {
-  // The dev-only "N" badge defaults to bottom-left, where it covered the
-  // sidebar's account details and sign-out button.
-  devIndicators: { position: "bottom-right" },
+  // The dev-only "N" badge sits bottom-left: bottom-right is where the
+  // "Need help?" button and dialog actions are.
+  devIndicators: { position: "bottom-left" },
 
   // ── Experimental optimisations ────────────────────────────────────────────
   experimental: {

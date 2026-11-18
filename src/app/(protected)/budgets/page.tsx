@@ -171,33 +171,39 @@ export default function BudgetsPage() {
 
       {/* Summary row */}
       {!isLoading && budgets.length > 0 && (
-        <div className="grid grid-cols-3 gap-3 sm:flex sm:flex-wrap sm:gap-5">
-          <div className="rounded-lg border border-border/60 bg-card p-4 shadow-sm">
+        <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:gap-5">
+          <div className="min-w-0 rounded-lg border border-border/60 bg-card p-3 shadow-sm sm:p-4">
             <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
               Total limit
             </p>
-            <p className="mt-1.5 text-xl font-semibold tabular-nums tracking-tight">
+            <p className="mt-1.5 text-[15px] font-semibold tabular-nums tracking-tight sm:text-xl">
               {formatCurrency(totalLimit)}
             </p>
           </div>
-          <div className="rounded-lg border border-border/60 bg-card p-4 shadow-sm">
+          <div className="min-w-0 rounded-lg border border-border/60 bg-card p-3 shadow-sm sm:p-4">
             <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
               Total spent
             </p>
-            <p className="mt-1.5 text-xl font-semibold tabular-nums tracking-tight">
+            <p className="mt-1.5 text-[15px] font-semibold tabular-nums tracking-tight sm:text-xl">
               {formatCurrency(totalSpent)}
             </p>
           </div>
-          <div className="rounded-lg border border-border/60 bg-card p-4 shadow-sm">
+          {/* Over budget reads as a plain figure with a small status line,
+              not a large red negative number. */}
+          <div className="min-w-0 rounded-lg border border-border/60 bg-card p-3 shadow-sm sm:p-4">
             <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-              Remaining
+              {isOverall ? "Over by" : "Remaining"}
+            </p>
+            <p className="mt-1.5 text-[15px] font-semibold tabular-nums tracking-tight sm:text-xl">
+              {formatCurrency(Math.abs(totalRemaining))}
             </p>
             <p
-              className={`mt-1.5 text-xl font-semibold tabular-nums tracking-tight ${
+              className={`mt-1 flex items-center gap-1.5 text-[11px] font-medium ${
                 isOverall ? "text-destructive" : "text-success"
               }`}
             >
-              {isOverall ? "-" : ""}{formatCurrency(Math.abs(totalRemaining))}
+              <span aria-hidden className={`size-1.5 rounded-full ${isOverall ? "bg-destructive" : "bg-success"}`} />
+              {isOverall ? "Over overall" : "On track"}
             </p>
           </div>
         </div>

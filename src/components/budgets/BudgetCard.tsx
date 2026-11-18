@@ -33,20 +33,24 @@ export function BudgetCard({ budget, onEdit, onDelete }: BudgetCardProps) {
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             {CategoryIcon && (
-              <span
-                className={`flex size-7 shrink-0 items-center justify-center rounded-md ${
-                  isOverBudget
-                    ? "bg-destructive/10 text-destructive"
-                    : "bg-primary/10 text-primary"
-                }`}
-              >
+              <span className="bg-muted text-muted-foreground flex size-7 shrink-0 items-center justify-center rounded-md">
                 <CategoryIcon className="size-3.5" />
               </span>
             )}
             <h3 className="truncate text-sm font-semibold">{budget.categoryName}</h3>
+            {(isOverBudget || isNearLimit) && (
+              <span
+                className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  isOverBudget ? "bg-destructive/10 text-destructive" : "bg-warning/12 text-warning"
+                }`}
+              >
+                {isOverBudget ? "Over" : "Nearly there"}
+              </span>
+            )}
           </div>
 
-          <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+          {/* Always visible on touch screens (no hover there). */}
+          <div className="flex shrink-0 items-center gap-0.5 opacity-100 transition-opacity pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:group-focus-within:opacity-100">
             <Button
               variant="ghost"
               size="icon"

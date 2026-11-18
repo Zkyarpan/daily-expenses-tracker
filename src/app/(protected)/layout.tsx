@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
+import { HelpProvider } from "@/components/help/HelpCenter";
 import { AppFooter } from "@/components/layout/AppFooter";
 import Navbar from "@/components/layout/Navbar";
 import { QuickAddProvider } from "@/components/money/QuickAddProvider";
@@ -90,7 +91,10 @@ export default async function AppLayout({
               interests={user?.interests ?? []}
               needsSetup={user?.needsSetup ?? false}
             >
-              <div className="app-backdrop bg-background flex min-h-svh flex-col">
+              {/* overflow-x-clip: nothing can make phones scroll (or zoom out) sideways;
+                  unlike overflow-hidden it keeps the sticky top bar working. */}
+              <HelpProvider>
+              <div className="app-backdrop bg-background flex min-h-svh flex-col overflow-x-clip">
                 <Navbar />
                 <main
                   className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 outline-none sm:px-6 lg:px-8 lg:py-10"
@@ -101,6 +105,7 @@ export default async function AppLayout({
                 </main>
                 <AppFooter />
               </div>
+              </HelpProvider>
             </EngagementProvider>
           </QuickAddProvider>
         </AlertsShell>

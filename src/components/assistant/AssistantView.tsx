@@ -12,6 +12,7 @@ import { aiApi } from "@/lib/api/ai";
 import { apiErrorMessage } from "@/lib/api/client";
 import type { AssistantAnswer } from "@/lib/assistant/answer";
 import type { AssistantContext } from "@/lib/assistant/query";
+import { withCurrencySymbol } from "@/lib/currency";
 import { markDone } from "@/lib/onboarding/prefs";
 import { getIsDemoMode } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
@@ -37,14 +38,14 @@ const STORAGE_KEY = "assistant-conversation";
 function AnswerCard({ answer, onAsk }: { answer: AssistantAnswer; onAsk: (q: string) => void }) {
   return (
     <div className="bg-card max-w-[min(100%,42rem)] space-y-4 rounded-2xl rounded-tl-md p-4 shadow-md sm:p-5">
-      <p className="text-sm leading-6">{answer.text}</p>
+      <p className="text-sm leading-6">{withCurrencySymbol(answer.text)}</p>
 
       {answer.facts.length > 0 && (
         <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {answer.facts.map((fact) => (
             <div key={fact.label} className="bg-muted/50 rounded-xl px-3 py-2">
               <dt className="text-muted-foreground text-[11px]">{fact.label}</dt>
-              <dd className="truncate text-sm font-semibold tabular-nums">{fact.value}</dd>
+              <dd className="truncate text-sm font-semibold tabular-nums">{withCurrencySymbol(fact.value)}</dd>
             </div>
           ))}
         </dl>
@@ -58,7 +59,7 @@ function AnswerCard({ answer, onAsk }: { answer: AssistantAnswer; onAsk: (q: str
                 <span className="block truncate text-sm font-medium">{item.title}</span>
                 <span className="text-muted-foreground block truncate text-xs">{item.subtitle}</span>
               </span>
-              <span className="shrink-0 text-sm font-semibold tabular-nums">{item.amount}</span>
+              <span className="shrink-0 text-sm font-semibold tabular-nums">{withCurrencySymbol(item.amount)}</span>
             </li>
           ))}
         </ul>

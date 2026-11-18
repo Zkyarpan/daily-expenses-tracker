@@ -20,10 +20,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import type { InsightsResponse } from "@/entities/Insights";
+import { callAI } from "@/lib/ai/provider";
 import type { AnalyticsBudget } from "@/lib/analytics";
 import { categoryNameOf } from "@/lib/categoryNames";
 import { generateInsights } from "@/lib/insights/generate";
-import { callPollinations, DEFAULT_MODEL } from "@/lib/insights/pollinations";
 import { createRateLimiter } from "@/lib/insights/rateLimit";
 import { buildInsightsSummary, insightsDateRange } from "@/lib/insights/summary";
 import { fetchExpenseRowsBetween, isMissingTableError } from "@/lib/supabase/queries";
@@ -137,11 +137,10 @@ export async function POST(request: Request) {
   }
 
   // ── Generate (AI with deterministic fallback) ────────────────────────────
-  const model = process.env.POLLINATIONS_MODEL?.trim() || DEFAULT_MODEL;
   const response = await generateInsights({
     ...input,
     callAI: async (messages) => {
-      const result = await callPollinations({ apiKey: process.env.POLLINATIONS_API_KEY, messages, model });
+      const result = await callAI({ messages });
       if (!result.ok) console.warn("[insights] AI unavailable:", result.reason, result.status ?? "", result.message);
       return result;
     },

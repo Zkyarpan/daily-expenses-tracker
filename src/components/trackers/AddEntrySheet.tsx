@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { DatePicker } from "@/components/shared/DatePicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -98,13 +99,7 @@ export const AddEntrySheet = ({
           {/* Date */}
           <div className="space-y-2">
             <Label htmlFor="date">Date</Label>
-            <Input
-              id="date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
-            />
+            <DatePicker id="date" value={date} onChange={setDate} />
           </div>
 
           {/* Description */}

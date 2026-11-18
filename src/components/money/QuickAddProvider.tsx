@@ -88,7 +88,7 @@ export function QuickAddProvider({ children }: { children: React.ReactNode }) {
         onSave={saveExpense}
         open={expenseOpen}
       />
-      <ReceiptScanDialog open={scanOpen} onOpenChange={setScanOpen} onSave={saveExpense} />
+      <ReceiptScanDialog open={scanOpen} onOpenChange={setScanOpen} onSave={saveExpense} onManual={openExpense} />
       <IouFormDialog
         direction={iouState.direction}
         iou={iouState.iou}

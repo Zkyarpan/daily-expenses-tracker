@@ -94,7 +94,7 @@ function LoginForm() {
           <Label htmlFor="password" className={AUTH_LABEL_CLASS}>
             Password
           </Label>
-          <Link href="/forgot-password" className={`text-xs ${AUTH_LINK_CLASS}`}>
+          <Link href="/forgot-password" className={`-my-2 py-2 text-xs ${AUTH_LINK_CLASS}`}>
             Forgot password?
           </Link>
         </div>

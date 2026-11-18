@@ -17,6 +17,6 @@ export default function manifest(): MetadataRoute.Manifest {
     name: SITE.name,
     short_name: "Expenses",
     start_url: "/",
-    theme_color: "#5b4bf5",
+    theme_color: "#007c72",
   };
 }

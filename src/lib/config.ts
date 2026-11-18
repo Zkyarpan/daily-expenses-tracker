@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { Category, Member, Tag } from "@/entities/Expense";
+import { currencySymbol, readStoredCurrency } from "@/lib/currency";
 
 export const GREEN = "oklch(0.70 0.15 145)";
 export const ORANGE = "oklch(0.75 0.18 75)";
@@ -58,23 +59,28 @@ export const CHART_PALETTE = [
 
 export const MEMBER_CHART_COLORS = CHART_PALETTE;
 
-type CurrencyCode = "USD" | "PKR" | "EUR" | "GBP" | "INR";
-type Symbol = "$" | "Rs." | "€" | "£" | "₹";
-
 interface LocaleConfig {
   locale: string;
-  currency: CurrencyCode;
+  /** ISO 4217 code, e.g. "GBP", "USD", "NPR". */
+  currency: string;
   style: "currency" | "decimal" | "percent";
-  symbol: Symbol;
+  /** Short prefix for amount fields, e.g. "£", "$", "Rs". */
+  symbol: string;
 }
 
-// Change these values to configure locale and currency
+/**
+ * Number formatting stays en-GB (1,234.50); the currency is the one chosen
+ * in Profile → Preferences on this device (GBP on the server and by default).
+ * See src/lib/currency.ts.
+ */
+const DISPLAY_CURRENCY = readStoredCurrency();
+
 export const LOCALE_CONFIG: LocaleConfig = {
-  currency: "GBP",
+  currency: DISPLAY_CURRENCY,
   locale: "en-GB",
   style: "currency" as const,
-  symbol: "£",
-} as const;
+  symbol: currencySymbol(DISPLAY_CURRENCY),
+};
 
 // Map by category name
 export const CATEGORY_ICONS_BY_NAME: Record<string, LucideIcon> = {

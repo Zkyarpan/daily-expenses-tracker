@@ -34,8 +34,9 @@ export function DataTablePagination<TData>({
           </>
         )}
       </div>
-      <div className="flex w-full flex-wrap items-center justify-between gap-x-6 gap-y-2 sm:w-auto sm:justify-end lg:gap-x-8">
-        <div className="flex items-center space-x-2">
+      <div className="flex w-full items-center justify-between gap-x-6 gap-y-2 sm:w-auto sm:flex-wrap sm:justify-end lg:gap-x-8">
+        {/* Page size is a desktop nicety; phones get page + arrows on one line. */}
+        <div className="hidden items-center space-x-2 sm:flex">
           <p className="text-sm font-medium whitespace-nowrap">Rows per page</p>
           <Select
             value={`${table.getState().pagination.pageSize}`}
@@ -73,7 +74,7 @@ export function DataTablePagination<TData>({
           <Button
             variant="outline"
             size="icon"
-            className="size-8"
+            className="size-9 sm:size-8"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
           >
@@ -83,7 +84,7 @@ export function DataTablePagination<TData>({
           <Button
             variant="outline"
             size="icon"
-            className="size-8"
+            className="size-9 sm:size-8"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >

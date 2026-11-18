@@ -14,10 +14,10 @@
 
 import { z } from "zod";
 
+import { activeProvider, callAI } from "@/lib/ai/provider";
 import { buildQueryMessages, parseAiQuery } from "@/lib/assistant/ai";
 import { applyContext, contextSchema, parseQuestion } from "@/lib/assistant/query";
 import { runAssistantQuery } from "@/lib/assistant/server";
-import { callPollinations, DEFAULT_MODEL } from "@/lib/insights/pollinations";
 import { createRateLimiter } from "@/lib/insights/rateLimit";
 import { resolveToday } from "@/lib/money/server";
 import { apiError, apiJson, authenticate, readJsonBody, tooManyRequests } from "@/lib/server/http";
@@ -51,12 +51,10 @@ export async function POST(request: Request) {
   // 1. Understand the question.
   let understoodBy: "ai" | "rules" = "rules";
   let query = parseQuestion(question, today, context);
-  if (process.env.POLLINATIONS_API_KEY) {
-    const result = await callPollinations({
-      apiKey: process.env.POLLINATIONS_API_KEY,
+  if (activeProvider()) {
+    const result = await callAI({
       maxCompletionTokens: 300,
       messages: buildQueryMessages(question, previousQuestion ?? null, today),
-      model: process.env.POLLINATIONS_MODEL?.trim() || DEFAULT_MODEL,
       timeoutMs: 8_000,
     });
     const aiQuery = result.ok ? parseAiQuery(result.content) : null;

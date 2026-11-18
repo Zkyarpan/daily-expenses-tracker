@@ -15,7 +15,8 @@ import { cn } from "@/lib/utils";
  */
 
 export const AUTH_INPUT_CLASS =
-  "h-12 rounded-2xl border-2 px-4 text-sm focus-visible:border-primary";
+  // 16px text on phones: anything smaller makes iPhones zoom in on tap.
+  "h-12 rounded-2xl border-2 px-4 text-base md:text-sm focus-visible:border-primary";
 
 export const AUTH_LABEL_CLASS = "text-sm font-semibold";
 
@@ -34,9 +35,9 @@ interface AuthShellProps {
 
 export function AuthShell({ children, features, heroText, heroTitle }: AuthShellProps) {
   return (
-    <div className="bg-background app-backdrop flex min-h-svh">
-      {/* Left — brand panel: solid indigo with a soft glow and dot grid */}
-      <div className="relative hidden w-[46%] flex-col justify-between overflow-hidden bg-[linear-gradient(150deg,#6d5df8_0%,#4b3be0_45%,#2a1d9e_100%)] p-12 text-white lg:flex">
+    <div className="bg-background app-backdrop flex min-h-svh overflow-x-clip">
+      {/* Left — brand panel: deep teal with a soft glow and dot grid */}
+      <div className="relative hidden w-[46%] flex-col justify-between overflow-hidden bg-[linear-gradient(150deg,#009689_0%,#00746d_45%,#003f3f_100%)] p-12 text-white lg:flex">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-[0.14]"
@@ -47,7 +48,7 @@ export function AuthShell({ children, features, heroText, heroTitle }: AuthShell
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute -top-40 -right-32 size-[30rem] rounded-full bg-[#c8f542]/20 blur-3xl"
+          className="pointer-events-none absolute -top-40 -right-32 size-[30rem] rounded-full bg-[#f9d04f]/20 blur-3xl"
         />
 
         {/* Logo only */}
@@ -67,7 +68,7 @@ export function AuthShell({ children, features, heroText, heroTitle }: AuthShell
           <ul className="space-y-3.5">
             {features.map((feature) => (
               <li key={feature} className="flex items-center gap-3">
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#c8f542] text-[#24301a]">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#f9d04f] text-[#382500]">
                   <Check size={12} weight="bold" aria-hidden />
                 </span>
                 <span className="text-sm font-medium text-white/85">{feature}</span>
@@ -80,11 +81,11 @@ export function AuthShell({ children, features, heroText, heroTitle }: AuthShell
       </div>
 
       {/* Right — form panel */}
-      <div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
+      <div className="flex flex-1 flex-col items-center justify-center px-5 py-10 sm:px-6 sm:py-12">
         <div className="w-full max-w-sm">
           {/* Mobile: logo only */}
-          <div className="mb-10 flex justify-center lg:hidden">
-            <LogoMark className="size-16 drop-shadow-lg" title="Daily Expenses" />
+          <div className="mb-8 flex justify-center sm:mb-10 lg:hidden">
+            <LogoMark className="size-14 drop-shadow-lg sm:size-16" title="Daily Expenses" />
           </div>
 
           {children}
@@ -98,7 +99,7 @@ export function AuthShell({ children, features, heroText, heroTitle }: AuthShell
 export function AuthHeading({ subtitle, title }: { subtitle: React.ReactNode; title: string }) {
   return (
     <div className="mb-8">
-      <h1 className="text-3xl font-bold" style={{ letterSpacing: "-0.035em" }}>
+      <h1 className="text-[1.75rem] leading-tight font-bold sm:text-3xl" style={{ letterSpacing: "-0.035em" }}>
         {title}
       </h1>
       <p className="text-muted-foreground mt-2 text-sm">{subtitle}</p>
@@ -161,7 +162,7 @@ export function PasswordInput({
       <button
         type="button"
         onClick={() => setVisible((v) => !v)}
-        className="text-muted-foreground hover:text-foreground absolute top-1/2 right-4 -translate-y-1/2 transition-colors"
+        className="text-muted-foreground hover:text-foreground absolute top-1/2 right-1.5 flex size-10 -translate-y-1/2 items-center justify-center rounded-xl transition-colors"
         aria-label={visible ? hideLabel : showLabel}
       >
         {visible ? <EyeSlash size={18} /> : <Eye size={18} />}

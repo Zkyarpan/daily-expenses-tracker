@@ -3,6 +3,8 @@
  * receipt scanning (/api/receipts/scan) and the assistant (/api/assistant).
  */
 
+import { useQuery } from "@tanstack/react-query";
+
 import type { AssistantAnswer } from "@/lib/assistant/answer";
 import type { AssistantContext } from "@/lib/assistant/query";
 import type { ReceiptDraft } from "@/lib/receipts/receipt";
@@ -18,7 +20,19 @@ export const aiApi = {
     ),
   scanReceipt: (image: string) =>
     request<{ receipt: ReceiptDraft }>(`/api/receipts/scan?today=${localToday()}`, json("POST", { image })),
+  /** Whether an AI provider is set up on the server (never reveals a key). */
+  status: () => request<{ available: boolean; provider: "gemini" | "pollinations" | null }>("/api/ai/status"),
 };
+
+/** AI availability, checked once per session and shared by every screen. */
+export function useAiStatus() {
+  return useQuery({
+    queryFn: aiApi.status,
+    queryKey: ["ai-status"],
+    retry: 1,
+    staleTime: 10 * 60_000,
+  });
+}
 
 /**
  * Prepares a photo for upload: decodes it, scales the longest side to at most

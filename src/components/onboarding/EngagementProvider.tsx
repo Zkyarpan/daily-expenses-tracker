@@ -1,15 +1,26 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { useQuickAdd } from "@/components/money/QuickAddProvider";
 import { useAlerts } from "@/components/providers/context/AlertsContext";
+import { useExpenses } from "@/hooks/expenses/useExpenses";
 import { onboardingApi } from "@/lib/api/onboarding";
-import { readDone, readPrefs, readStamp, todayKey, writeStamp } from "@/lib/onboarding/prefs";
+import { notificationPermission, registerNotificationWorker, showSystemNotification } from "@/lib/notify";
+import {
+  addSeenSignals,
+  readDone,
+  readPrefs,
+  readSeenSignals,
+  readStamp,
+  todayKey,
+  writeStamp,
+} from "@/lib/onboarding/prefs";
 import type { InterestId } from "@/lib/onboarding/schemas";
+import { spendingSignals } from "@/lib/onboarding/spendingSignals";
 import { isReminderDue, pickTip } from "@/lib/onboarding/tips";
 import { formatCurrency } from "@/lib/utils";
 
@@ -31,22 +42,16 @@ const NOOP: Engagement = { enabled: false, openSetup: () => {}, startTour: () =>
 /** Setup + tour controls; inert outside the signed-in app shell. */
 export const useEngagement = () => useContext(EngagementContext) ?? NOOP;
 
-/** System notification when the tab is in the background and permission was given; otherwise null. */
-function systemNotify(title: string, body: string, onClick?: () => void): boolean {
-  if (typeof Notification === "undefined" || Notification.permission !== "granted" || document.visibilityState === "visible") {
-    return false;
-  }
-  try {
-    const n = new Notification(title, { body, icon: "/icon.svg", tag: title });
-    n.onclick = () => {
-      window.focus();
-      onClick?.();
-      n.close();
-    };
-    return true;
-  } catch {
-    return false;
-  }
+/**
+ * In the background, with permission: a system notification (tapping it opens
+ * `url`). Returns false when the tab is visible or notifications aren't
+ * allowed, so the caller shows an in-app pop-up instead.
+ */
+function systemNotify(title: string, body: string, url?: string): boolean {
+  if (typeof document === "undefined" || document.visibilityState === "visible") return false;
+  if (notificationPermission() !== "granted") return false;
+  void showSystemNotification(title, { body, tag: title, url });
+  return true;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -138,6 +143,55 @@ function useNudges({ active, interests }: { active: boolean; interests: Interest
     return () => clearTimeout(timer);
   }, [active, interests, openIou, openReceiptScan, openWishlist, router]);
 
+  // Daily check-in: the app asks one quick question (~45 s in, once a day).
+  useEffect(() => {
+    if (!active) return;
+    const timer = setTimeout(() => {
+      const now = new Date();
+      const today = todayKey(now);
+      if (!readPrefs().tips || document.visibilityState !== "visible" || readStamp("checkIn") === today) return;
+      writeStamp("checkIn", today);
+
+      const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86_400_000);
+      const questions = [
+        {
+          body: "Logging it now takes a few seconds.",
+          no: { label: "Not today", run: () => toast.success("Nice — a no-spend day!", { description: "Days like this add up." }) },
+          title: "Quick question: did you spend anything today?",
+          yes: { label: "Yes, add it", run: () => openExpense() },
+        },
+        {
+          body: "Mark it as paid so your totals stay right.",
+          no: { label: "No", run: () => {} },
+          title: "Has anyone paid you back lately?",
+          yes: { label: "Yes, update it", run: () => router.push("/lend-borrow") },
+        },
+        {
+          body: "Your categories, trends and month-on-month change.",
+          no: { label: "Later", run: () => {} },
+          title: "Want to see where your money went this month?",
+          yes: { label: "Show me", run: () => router.push("/analytics") },
+        },
+        {
+          body: "Snap it and the details fill themselves in.",
+          no: { label: "No", run: () => {} },
+          title: "Got a receipt from today?",
+          yes: { label: "Scan it", run: () => openReceiptScan() },
+        },
+      ];
+      // Evenings always ask about today's spending; other times rotate by day.
+      const q = now.getHours() >= 17 ? questions[0] : questions[dayOfYear % questions.length];
+      toast(q.title, {
+        action: { label: q.yes.label, onClick: q.yes.run },
+        cancel: { label: q.no.label, onClick: q.no.run },
+        description: q.body,
+        duration: 20_000,
+        id: "check-in",
+      });
+    }, 45_000);
+    return () => clearTimeout(timer);
+  }, [active, openExpense, openReceiptScan, router]);
+
   // Daily reminder, checked every minute while the app is open.
   useEffect(() => {
     if (!active) return;
@@ -148,7 +202,7 @@ function useNudges({ active, interests }: { active: boolean; interests: Interest
       writeStamp("lastReminder", todayKey(now));
       const title = "Time to log today’s spending";
       const body = "It takes 30 seconds — add anything you spent today.";
-      if (!systemNotify(title, body, openExpense)) {
+      if (!systemNotify(title, body, "/expenses")) {
         toast.info(title, {
           action: { label: "Add expense", onClick: () => openExpense() },
           description: body,
@@ -175,20 +229,91 @@ function useNudges({ active, interests }: { active: boolean; interests: Interest
     }
     const fresh = alerts.filter((a) => !a.isRead && !a.isDismissed && !notified.includes(a.id));
     if (fresh.length === 0) return;
-    for (const alert of fresh.slice(0, 3)) {
-      const over = alert.spentPercent > 100;
-      const title = over ? `${alert.categoryName} is over budget` : `${alert.categoryName} is at ${Math.round(alert.spentPercent)}% of its budget`;
-      const body = `${formatCurrency(alert.spentAmount)} of ${formatCurrency(alert.limitAmount)} spent this month.`;
-      if (!systemNotify(title, body, () => router.push("/budgets"))) {
-        (over ? toast.error : toast.warning)(title, {
-          action: { label: "View budgets", onClick: () => router.push("/budgets") },
-          description: body,
-          duration: 10_000,
-        });
-      }
-    }
     localStorage.setItem(NOTIFIED_KEY, JSON.stringify([...notified, ...fresh.map((a) => a.id)].slice(-200)));
+
+    // Several budgets crossing a line together → one summary, not a pile of pop-ups.
+    const anyOver = fresh.some((a) => a.spentPercent > 100);
+    let title: string;
+    let body: string;
+    if (fresh.length === 1) {
+      const [alert] = fresh;
+      title = anyOver ? `${alert.categoryName} is over budget` : `${alert.categoryName} is at ${Math.round(alert.spentPercent)}% of its budget`;
+      body = `${formatCurrency(alert.spentAmount)} of ${formatCurrency(alert.limitAmount)} spent this month.`;
+    } else {
+      const names = fresh.map((a) => a.categoryName);
+      const listed = names.length > 3 ? `${names.slice(0, 3).join(", ")} and ${names.length - 3} more` : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+      title = `${fresh.length} budgets need attention`;
+      body = `${listed} are close to or over their limit.`;
+    }
+    const openBudgets = () => router.push("/budgets");
+    if (!systemNotify(title, body, "/budgets")) {
+      (anyOver ? toast.error : toast.warning)(title, {
+        action: { label: "View budgets", onClick: openBudgets },
+        description: body,
+        duration: 10_000,
+        // A later batch replaces this one rather than stacking under it.
+        id: "budget-alerts",
+      });
+    }
   }, [active, alerts, router]);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Spending alerts: "something happened" pop-ups worked out from your expenses
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Gap between two spending pop-ups, so they never pile up. */
+const SIGNAL_GAP_MS = 3 * 60_000;
+
+function useSpendingWatch({ active }: { active: boolean }) {
+  const router = useRouter();
+  // The calendar month when the app was opened; a new month is picked up on reload.
+  const [today] = useState(() => new Date());
+  const year = today.getFullYear();
+  const month0 = today.getMonth();
+  const thisMonth = useExpenses(year, month0);
+  const lastMonth = useExpenses(month0 === 0 ? year - 1 : year, month0 === 0 ? 11 : month0 - 1);
+  const lastShown = useRef(0);
+
+  const ready = thisMonth.isSuccess && lastMonth.isSuccess;
+  const signals = useMemo(
+    () =>
+      ready
+        ? spendingSignals({
+            format: (amount) => formatCurrency(amount),
+            lastMonth: lastMonth.data ?? [],
+            thisMonth: thisMonth.data ?? [],
+            today: new Date(),
+          })
+        : [],
+    [ready, thisMonth.data, lastMonth.data],
+  );
+
+  useEffect(() => {
+    if (!active || signals.length === 0) return;
+    // A few seconds after the data settles, so it doesn't land on top of page load.
+    const wait = Math.max(6_000, lastShown.current + SIGNAL_GAP_MS - Date.now());
+    const timer = setTimeout(() => {
+      if (!readPrefs().spendingAlerts || !navigator.onLine) return;
+      const seen = new Set(readSeenSignals());
+      const fresh = signals.filter((s) => !seen.has(s.id));
+      if (fresh.length === 0) return;
+      // One pop-up at a time; the rest are skipped for now (they're older news).
+      const [signal] = fresh;
+      addSeenSignals(fresh.map((s) => s.id));
+      lastShown.current = Date.now();
+      const go = () => router.push(signal.href);
+      if (systemNotify(signal.title, signal.body, signal.href)) return;
+      const show = signal.tone === "success" ? toast.success : signal.tone === "warning" ? toast.warning : toast.info;
+      show(signal.title, {
+        action: { label: signal.actionLabel, onClick: go },
+        description: signal.body,
+        duration: 12_000,
+        id: "spending-signal",
+      });
+    }, wait);
+    return () => clearTimeout(timer);
+  }, [active, router, signals]);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -222,14 +347,22 @@ export function EngagementProvider({
   }, [enabled, needsSetup]);
 
   useLiveSync();
+  // Notifications already allowed: make sure the notification worker is ready.
+  useEffect(() => {
+    if (enabled && notificationPermission() === "granted") void registerNotificationWorker();
+  }, [enabled]);
   useNudges({ active: enabled && !setupOpen && !tourOpen, interests });
+  useSpendingWatch({ active: enabled && !setupOpen && !tourOpen });
 
   const startTour = useCallback(() => setTourOpen(true), []);
   const openSetup = useCallback(() => setSetupOpen(true), []);
 
+  // New users get the full app tour straight after setup — whether they
+  // finished it or chose "Set up later". Every tour step has "Skip tour".
   const finish = async ({ name, tour }: WizardResult) => {
     setSetupOpen(false);
-    toast.success(`Welcome aboard, ${name}!`, { description: "Your account is set up around you." });
+    // The tour opens with its own welcome, so only toast when there is no tour.
+    if (!tour) toast.success(`Welcome aboard, ${name}!`, { description: "Your account is set up around you." });
     await queryClient.invalidateQueries();
     router.refresh();
     if (tour) setTimeout(() => setTourOpen(true), 600);
@@ -237,12 +370,12 @@ export function EngagementProvider({
 
   const skip = async () => {
     setSetupOpen(false);
+    setTimeout(() => setTourOpen(true), 400);
     try {
       await onboardingApi.skip();
     } catch {
       // Not critical: the questions will simply be offered again next time.
     }
-    toast.info("No problem", { description: "You can run setup or take the tour any time from your account menu." });
     router.refresh();
   };
 

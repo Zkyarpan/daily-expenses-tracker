@@ -9,6 +9,7 @@ import { BulkUpdate } from "@/components/expenses/BulkUpdate";
 import { DeleteExpenseDialog } from "@/components/expenses/DeleteExpenseDialog";
 import { ExpenseFormDialog } from "@/components/expenses/ExpenseFormDialog";
 import ExpenseHeader from "@/components/expenses/ExpenseHeader";
+import { ExpenseMobileRow } from "@/components/expenses/ExpenseMobileRow";
 import { ErrorState } from "@/components/shared/ErrorState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { ExpensesPageSkeleton } from "@/components/shared/PageSkeletons";
@@ -27,6 +28,9 @@ import { getErrorMessage, stripExpenseDetails } from "@/lib/utils";
 import { createColumns } from "./columns";
 import { DataTable } from "./data-table";
 
+/** Stable fallback, so "no data yet" isn't a new array on every render. */
+const NO_EXPENSES: ExpenseWithDetails[] = [];
+
 const ExpensesPage = () => {
   const currentDate = new Date();
   const [currentMonth, setCurrentMonth] = useState(currentDate.getMonth());
@@ -35,7 +39,7 @@ const ExpensesPage = () => {
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
 
   // ── Server data ────────────────────────────────────────────────────────────
-  const { data: fetchedData = [], isLoading, error: fetchError } = useExpenses(
+  const { data: fetchedData = NO_EXPENSES, isLoading, error: fetchError } = useExpenses(
     currentYear,
     currentMonth,
   );
@@ -50,11 +54,15 @@ const ExpensesPage = () => {
   const [goToLastPage, setGoToLastPage] = useState(false);
 
   // Reload the editable copy when the month changes or rows are added/removed
-  // on the server (same triggers as before: row count, month, year).
+  // on the server (row count, month, year), and — when there are no unsaved
+  // spreadsheet edits — whenever the server data changes, so an edit made in
+  // the dialog (the main way to edit on phones) shows straight away.
   const syncKey = `${fetchedData.length}|${currentMonth}|${currentYear}`;
   const [syncedKey, setSyncedKey] = useState<string | null>(null);
-  if (syncedKey !== syncKey) {
+  const [syncedData, setSyncedData] = useState<ExpenseWithDetails[] | null>(null);
+  if (syncedKey !== syncKey || (syncedData !== fetchedData && !hasUnsavedChanges)) {
     setSyncedKey(syncKey);
+    setSyncedData(fetchedData);
     setLocalExpenses(fetchedData);
     setHasUnsavedChanges(false);
     setGoToLastPage(false);
@@ -246,7 +254,13 @@ const ExpensesPage = () => {
   const pageHeader = (
     <PageHeader
       title="Expenses"
-      description="Add, edit and review your spending one month at a time. Click any cell in the table to change it."
+      description={
+        <>
+          Add, edit and review your spending one month at a time.
+          <span className="hidden md:inline"> Click any cell in the table to change it.</span>
+          <span className="md:hidden"> Tap an expense to change it.</span>
+        </>
+      }
       actions={
         <>
           <Button asChild variant="outline" size="sm" className="gap-1.5">
@@ -320,7 +334,7 @@ const ExpensesPage = () => {
         </BulkUpdate>
       )}
 
-      {/* Table */}
+      {/* Table (a tappable list on phones) */}
       <DataTable
         columns={columns}
         data={localExpenses}
@@ -328,13 +342,25 @@ const ExpensesPage = () => {
         isLoading={isLoading}
         onRowSelectionChange={setRowSelection}
         rowSelection={rowSelection}
+        renderMobileRow={(row) => (
+          <ExpenseMobileRow
+            key={row.id}
+            categories={DEFAULT_CATEGORIES}
+            expense={row.original}
+            members={DEFAULT_MEMBERS}
+            onDelete={handleOpenDelete}
+            onEdit={handleOpenEdit}
+            onSelectedChange={(value) => row.toggleSelected(value)}
+            selected={row.getIsSelected()}
+          />
+        )}
       />
 
       {/* Floating save bar — only while there are unsaved edits */}
       {hasUnsavedChanges && (
         <div
           role="status"
-          className="bg-popover sticky bottom-4 z-20 mx-auto flex w-full max-w-xl flex-wrap items-center gap-3 rounded-2xl border py-2.5 pr-2.5 pl-4 shadow-[0_16px_40px_-8px_rgb(0_0_0/0.5)] dark:border-white/15"
+          className="bg-popover sticky bottom-[max(1rem,env(safe-area-inset-bottom))] z-20 mx-auto flex w-full max-w-xl flex-wrap items-center gap-2 rounded-2xl border py-2.5 pr-2.5 pl-4 shadow-[0_16px_40px_-8px_rgb(0_0_0/0.5)] sm:gap-3 dark:border-white/15"
         >
           <span aria-hidden className="bg-warning size-2 shrink-0 rounded-full" />
           <p className="min-w-0 flex-1 text-sm">

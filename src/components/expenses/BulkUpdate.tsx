@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check } from "lucide-react";
 
+import { DatePicker } from "@/components/shared/DatePicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -98,7 +99,7 @@ export const BulkUpdate = ({
     switch (fieldConfig?.type) {
       case "number":
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex w-full items-center gap-2 sm:w-auto">
             <span className="text-muted-foreground text-sm">
               {LOCALE_CONFIG.symbol}
             </span>
@@ -107,7 +108,7 @@ export const BulkUpdate = ({
               value={fieldValue}
               onChange={(e) => setFieldValue(e.target.value)}
               placeholder="Enter amount..."
-              className="h-9 w-32"
+              className="h-9 w-full sm:w-32"
               step="0.01"
               min="0"
             />
@@ -116,12 +117,11 @@ export const BulkUpdate = ({
 
       case "date":
         return (
-          <Input
-            type="date"
+          <DatePicker
+            aria-label="New date"
             value={fieldValue}
-            onChange={(e) => setFieldValue(e.target.value)}
-            onFocus={(e) => e.target.showPicker?.()}
-            className="h-9 w-40"
+            onChange={setFieldValue}
+            className="h-9 w-full border sm:w-44"
           />
         );
 
@@ -132,7 +132,7 @@ export const BulkUpdate = ({
             value={fieldValue}
             onChange={(e) => setFieldValue(e.target.value)}
             placeholder="Add description..."
-            className="h-9 w-64"
+            className="h-9 w-full sm:w-64"
           />
         );
 
@@ -149,7 +149,7 @@ export const BulkUpdate = ({
 
         return (
           <Select value={fieldValue} onValueChange={setFieldValue}>
-            <SelectTrigger className="h-9 w-40">
+            <SelectTrigger className="h-9 w-full sm:w-40">
               <SelectValue placeholder="Select value..." />
             </SelectTrigger>
             <SelectContent>
@@ -174,14 +174,19 @@ export const BulkUpdate = ({
     <div
       role="region"
       aria-label="Selected expenses"
-      className="bg-popover flex flex-wrap items-center gap-2 rounded-2xl border p-2 pl-4 shadow-md dark:border-white/15"
+      // Phones: sticks under the top bar while you scroll the list, so the
+      // actions stay in reach. Count + delete/clear on top, the editor below.
+      className="bg-popover sticky top-16 z-30 flex flex-wrap items-center gap-2 rounded-2xl border p-2 pl-4 shadow-lg md:static md:shadow-md dark:border-white/15"
     >
       <div className="text-sm font-semibold tabular-nums">
         {selectedCount} selected
       </div>
 
-      <div className="bg-border mx-1 h-5 w-px" aria-hidden />
+      {children && <div className="ml-auto flex items-center gap-1 md:order-last">{children}</div>}
 
+      <div className="bg-border mx-1 hidden h-5 w-px md:block" aria-hidden />
+
+      <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:flex-1">
       <Select
         value={selectedField}
         onValueChange={(value) => {
@@ -189,7 +194,7 @@ export const BulkUpdate = ({
           setFieldValue("");
         }}
       >
-        <SelectTrigger className="h-9 w-48">
+        <SelectTrigger className="h-9 w-full sm:w-48">
           <SelectValue placeholder="Change a field…" />
         </SelectTrigger>
         <SelectContent>
@@ -203,21 +208,20 @@ export const BulkUpdate = ({
 
       {selectedField && (
         <>
-          {renderValueInput()}
+          <div className="min-w-0 flex-1 sm:flex-none">{renderValueInput()}</div>
 
           <Button
             size="sm"
             onClick={handleApply}
             disabled={!fieldValue}
-            className="gap-1.5"
+            className="h-9 gap-1.5"
           >
             <Check className="size-3.5" />
             Apply
           </Button>
         </>
       )}
-
-      {children && <div className="ml-auto flex items-center gap-1">{children}</div>}
+      </div>
     </div>
   );
 };

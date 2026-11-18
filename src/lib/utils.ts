@@ -74,6 +74,8 @@ export const getCategoryColor = (categoryName: string): string => {
 // default formatters are created once and reused.
 const CURRENCY_FORMAT: Intl.NumberFormatOptions = {
   currency: LOCALE_CONFIG.currency,
+  // "$" rather than "US$", "Rs" rather than "NPR" — the app shows one currency.
+  currencyDisplay: "narrowSymbol",
   style: LOCALE_CONFIG.style,
 };
 const COMPACT_CURRENCY_FORMAT: Intl.NumberFormatOptions = {

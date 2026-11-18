@@ -7,8 +7,21 @@ setup** card, use **Copy setup SQL**: it now copies all three migrations in
 order, ending with `20261119000000_create_savings_plan.sql`. Paste it into the
 Supabase SQL editor and press Run.
 
-Receipt scanning and Ask AI use the existing `POLLINATIONS_API_KEY`. The
-optional `POLLINATIONS_VISION_MODEL` sets the model used to read receipts.
+Every AI call goes through `callAI` in `src/lib/ai/provider.ts`, which uses
+the first provider that is set up:
+
+1. **Pollinations** — `POLLINATIONS_API_KEY` must be a **secret `sk_` key**
+   (https://enter.pollinations.ai/keys). Publishable `pk_` keys are rejected
+   by Pollinations for server requests (401), so they count as "not set up".
+   Optional: `POLLINATIONS_MODEL`, `POLLINATIONS_VISION_MODEL`.
+2. **Google Gemini** — `GOOGLE_GEMINI_API_KEY` (free key from
+   https://aistudio.google.com/apikey). Optional: `GEMINI_MODEL`
+   (default `gemini-2.5-flash`). Reads receipt photos too.
+
+`GET /api/ai/status` returns `{ available, provider }` (never a key), so the
+receipt window says up front when reading is switched off and offers
+"Add the expense by hand". Without any key, Ask AI still answers with the
+rule-based parser and spending insights use the built-in summary.
 
 ## Scan a receipt (header "+ New → Scan a receipt")
 

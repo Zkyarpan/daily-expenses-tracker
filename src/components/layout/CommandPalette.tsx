@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Desktop, Moon, Sun } from "@phosphor-icons/react";
+import { Desktop, Lifebuoy, Moon, Sun } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 
+import { useHelp } from "@/components/help/HelpCenter";
 import { startRouteProgress } from "@/components/layout/RouteProgress";
 import {
   CommandDialog,
@@ -16,7 +17,7 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 
-import { ACCOUNT_GROUP, NAV_GROUPS } from "./navigation";
+import { ALL_NAV_GROUPS } from "./navigation";
 
 const THEMES = [
   { icon: Sun, label: "Light", value: "light" },
@@ -24,11 +25,12 @@ const THEMES = [
   { icon: Desktop, label: "System", value: "system" },
 ] as const;
 
-/** Global ⌘K palette. Pages come from `NAV_GROUPS` in ./navigation. */
+/** Global ⌘K palette. Pages come from `ALL_NAV_GROUPS` in ./navigation. */
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const { setTheme } = useTheme();
+  const { openHelp } = useHelp();
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -52,8 +54,8 @@ export function CommandPalette() {
       <CommandInput placeholder="Search pages or actions…" />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
-        {[...NAV_GROUPS, ACCOUNT_GROUP].map((group) => (
-          <CommandGroup key={group.label} heading={group.label === "Overview" ? "Pages" : group.label}>
+        {ALL_NAV_GROUPS.map((group) => (
+          <CommandGroup key={group.label} heading={group.label}>
             {group.items.map(({ hint, icon: Icon, title, url }) => (
               <CommandItem key={url} value={`${title} ${hint}`} onSelect={() => handleSelect(url)}>
                 <Icon className="size-4" aria-hidden />
@@ -63,6 +65,20 @@ export function CommandPalette() {
             ))}
           </CommandGroup>
         ))}
+        <CommandSeparator />
+        <CommandGroup heading="Help">
+          <CommandItem
+            value="Help questions support how do I"
+            onSelect={() => {
+              setOpen(false);
+              openHelp();
+            }}
+          >
+            <Lifebuoy className="size-4" aria-hidden />
+            Help &amp; questions
+            <span className="text-muted-foreground ml-auto text-xs">?</span>
+          </CommandItem>
+        </CommandGroup>
         <CommandSeparator />
         <CommandGroup heading="Theme">
           {THEMES.map(({ icon: Icon, label, value }) => (

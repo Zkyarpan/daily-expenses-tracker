@@ -363,14 +363,14 @@ export function LendBorrowView() {
       <section className="bg-card overflow-hidden rounded-2xl shadow-md" aria-label="Entries">
         <div className="flex flex-col gap-3 border-b px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <Tabs value={status} onValueChange={(v) => setStatus(v as StatusFilter)}>
-            <TabsList>
+            <TabsList className="w-full sm:w-fit">
               <TabsTrigger value="open" className="px-3">Open</TabsTrigger>
               <TabsTrigger value="settled" className="px-3">Settled</TabsTrigger>
               <TabsTrigger value="all" className="px-3">All</TabsTrigger>
             </TabsList>
           </Tabs>
           <Tabs value={direction} onValueChange={(v) => setDirection(v as DirectionFilter)}>
-            <TabsList>
+            <TabsList className="w-full sm:w-fit">
               <TabsTrigger value="all" className="px-3">Everyone</TabsTrigger>
               <TabsTrigger value="lent" className="px-3">Owes me</TabsTrigger>
               <TabsTrigger value="borrowed" className="px-3">I owe</TabsTrigger>

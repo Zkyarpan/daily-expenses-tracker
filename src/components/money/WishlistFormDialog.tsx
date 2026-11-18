@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { DatePicker } from "@/components/shared/DatePicker";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -202,7 +203,14 @@ function WishlistForm({ item, onDone }: { item?: WishlistItem; onDone: () => voi
               <FormItem>
                 <FormLabel>Buy by (optional)</FormLabel>
                 <FormControl>
-                  <Input type="date" {...field} />
+                  <DatePicker
+                    clearable
+                    placeholder="No date"
+                    presets={false}
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

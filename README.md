@@ -158,8 +158,13 @@ Create a `.env.local` file in the root directory:
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 
-# Google Gemini Configuration (Optional - for in-app PDF import)
+# Google Gemini Configuration (Optional - PDF import, and the AI features
+# when no Pollinations secret key is set: receipt scanning, Ask AI, insights)
 GOOGLE_GEMINI_API_KEY=your_gemini_api_key_here
+
+# Pollinations (Optional - AI features). Must be a SECRET key (sk_...);
+# publishable pk_ keys are rejected for server requests.
+POLLINATIONS_API_KEY=sk_your_secret_key
 
 # Anthropic Configuration (Optional - for CLI PDF parsing script)
 ANTHROPIC_API_KEY=your_anthropic_api_key_here

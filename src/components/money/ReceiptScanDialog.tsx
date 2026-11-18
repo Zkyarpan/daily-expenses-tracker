@@ -1,9 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Camera, ImageUp, Loader2, Lock, RotateCcw, ScanLine, TriangleAlert } from "lucide-react";
+import { Camera, ImageUp, Loader2, Lock, PenLine, RotateCcw, ScanLine, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 
+import { DatePicker } from "@/components/shared/DatePicker";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { CreateExpenseInput } from "@/entities/Expense";
-import { aiApi, prepareReceiptImage } from "@/lib/api/ai";
+import { aiApi, prepareReceiptImage, useAiStatus } from "@/lib/api/ai";
 import { apiErrorMessage } from "@/lib/api/client";
 import { localToday } from "@/lib/api/money";
 import { DEFAULT_CATEGORIES } from "@/lib/config";
@@ -36,7 +37,18 @@ const CONFIDENCE = {
   medium: { label: "Mostly clear", tone: "info" },
 } as const;
 
-function ScanFlow({ onDone, onSave }: { onDone: () => void; onSave: (input: CreateExpenseInput) => Promise<void> }) {
+function ScanFlow({
+  onDone,
+  onManual,
+  onSave,
+}: {
+  onDone: () => void;
+  /** Opens the normal expense form — the way out when the AI can't help. */
+  onManual?: () => void;
+  onSave: (input: CreateExpenseInput) => Promise<void>;
+}) {
+  const aiStatus = useAiStatus();
+  const aiOff = aiStatus.data?.available === false;
   const cameraRef = useRef<HTMLInputElement>(null);
   const libraryRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<Step>({ kind: "pick" });
@@ -126,6 +138,42 @@ function ScanFlow({ onDone, onSave }: { onDone: () => void; onSave: (input: Crea
     </>
   );
 
+  const manualButton = onManual && (
+    <Button
+      type="button"
+      variant="outline"
+      className="w-full gap-1.5"
+      onClick={() => {
+        onDone();
+        onManual();
+      }}
+    >
+      <PenLine className="size-4" aria-hidden />
+      Add the expense by hand
+    </Button>
+  );
+
+  if (step.kind === "pick" && aiOff) {
+    // Said up front, instead of failing after a photo is chosen.
+    return (
+      <div className="space-y-4">
+        <div className="bg-muted/50 flex items-start gap-3 rounded-2xl p-4">
+          <span className="bg-background text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-xl">
+            <ScanLine className="size-4" aria-hidden />
+          </span>
+          <div className="space-y-1">
+            <p className="text-sm font-medium">Receipt reading isn’t switched on yet</p>
+            <p className="text-muted-foreground text-sm leading-6">
+              It needs an AI key on the server. Everything else works as normal — you can add this expense by hand
+              in a few seconds.
+            </p>
+          </div>
+        </div>
+        {manualButton}
+      </div>
+    );
+  }
+
   if (step.kind === "pick") {
     return (
       <div className="space-y-4">
@@ -155,10 +203,13 @@ function ScanFlow({ onDone, onSave }: { onDone: () => void; onSave: (input: Crea
           </button>
         </div>
         {error && (
-          <p role="alert" className="text-destructive flex items-start gap-2 text-sm">
-            <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
-            {error}
-          </p>
+          <div className="space-y-3">
+            <p role="alert" className="text-destructive flex items-start gap-2 text-sm">
+              <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+              {error}
+            </p>
+            {manualButton}
+          </div>
         )}
         <p className="text-muted-foreground flex items-start gap-2 text-xs leading-5">
           <Lock className="mt-0.5 size-3 shrink-0" aria-hidden />
@@ -234,7 +285,7 @@ function ScanFlow({ onDone, onSave }: { onDone: () => void; onSave: (input: Crea
         </div>
         <div className="space-y-2">
           <Label htmlFor="receipt-date">Date</Label>
-          <Input id="receipt-date" type="date" value={form.date} max={localToday()} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} />
+          <DatePicker id="receipt-date" value={form.date} max={localToday()} onChange={(date) => setForm((f) => ({ ...f, date }))} />
         </div>
         <div className="space-y-2">
           <Label>Category</Label>
@@ -274,10 +325,12 @@ function ScanFlow({ onDone, onSave }: { onDone: () => void; onSave: (input: Crea
 }
 
 export function ReceiptScanDialog({
+  onManual,
   onOpenChange,
   onSave,
   open,
 }: {
+  onManual?: () => void;
   onOpenChange: (open: boolean) => void;
   onSave: (input: CreateExpenseInput) => Promise<void>;
   open: boolean;
@@ -292,7 +345,7 @@ export function ReceiptScanDialog({
           </DialogTitle>
           <DialogDescription>Snap a receipt and AI fills in the expense for you to check.</DialogDescription>
         </DialogHeader>
-        {open && <ScanFlow onDone={() => onOpenChange(false)} onSave={onSave} />}
+        {open && <ScanFlow onDone={() => onOpenChange(false)} onManual={onManual} onSave={onSave} />}
       </DialogContent>
     </Dialog>
   );

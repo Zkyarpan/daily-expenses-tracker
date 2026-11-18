@@ -19,6 +19,7 @@ import { Bell } from "@phosphor-icons/react";
 import { Check, CircleAlert, PiggyBank, TriangleAlert, X } from "lucide-react";
 import Link from "next/link";
 
+import { BAR_ICON_BUTTON } from "@/components/layout/styles";
 import { Meter } from "@/components/shared/Meter";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -159,23 +160,19 @@ export function AlertsPanel({
     >
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
-          size="sm"
-          className={cn(
-            "relative size-9 p-0 sm:w-auto sm:gap-2 sm:px-3",
-            open && "bg-muted text-foreground",
-          )}
+          variant="ghost"
+          size="icon"
+          className={cn(BAR_ICON_BUTTON, "relative", unreadCount > 0 && "text-foreground")}
           aria-label={
             unreadCount > 0
               ? `${unreadCount} unread spending alert${unreadCount === 1 ? "" : "s"}`
               : "Spending alerts"
           }
         >
-          <Bell size={15} weight={unreadCount > 0 ? "fill" : "bold"} className="shrink-0" />
-          <span className="hidden text-xs font-medium sm:inline">Alerts</span>
+          <Bell size={18} weight={unreadCount > 0 ? "fill" : "bold"} className="shrink-0" />
           {unreadCount > 0 && (
             <span
-              className="bg-destructive ring-background absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full text-[10px] leading-none font-bold text-white ring-2"
+              className="bg-destructive ring-card absolute top-0.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] leading-none font-bold text-white ring-2"
               aria-hidden="true"
             >
               {unreadCount > 9 ? "9+" : unreadCount}

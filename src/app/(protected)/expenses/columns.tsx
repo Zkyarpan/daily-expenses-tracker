@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 
+import { DatePicker } from "@/components/shared/DatePicker";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
@@ -209,16 +210,15 @@ export const createColumns = ({
         }, [row.original.date]);
 
         return (
-          <Input
-            type="date"
-            value={dateValue}
-            onChange={(e) => {
-              setDateValue(e.target.value);
-              onUpdate(row.original.id, "date", new Date(e.target.value));
-            }}
-            onFocus={(e) => e.target.showPicker?.()}
+          <DatePicker
+            variant="ghost"
             aria-label="Date"
-            className={`${GHOST_INPUT} text-muted-foreground w-[8.5rem] tabular-nums [color-scheme:light] dark:[color-scheme:dark]`}
+            value={dateValue}
+            onChange={(value) => {
+              setDateValue(value);
+              onUpdate(row.original.id, "date", new Date(value));
+            }}
+            className="text-muted-foreground w-[8.75rem]"
           />
         );
       },

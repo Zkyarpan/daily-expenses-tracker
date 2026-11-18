@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { DatePicker } from "@/components/shared/DatePicker";
 import { Money } from "@/components/shared/Money";
 import {
   AlertDialog,
@@ -24,7 +25,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useMoneyMutations } from "@/hooks/money/useMoneyMutations";
 import { apiErrorMessage } from "@/lib/api/client";
@@ -281,7 +281,7 @@ function BuyForm({ item, onDone }: { item: WishlistItem; onDone: () => void }) {
         </div>
         <div className="space-y-2">
           <Label htmlFor="buy-date">Date</Label>
-          <Input id="buy-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <DatePicker id="buy-date" value={date} onChange={setDate} />
         </div>
       </div>
       <label className="bg-muted/40 flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2.5 text-sm">

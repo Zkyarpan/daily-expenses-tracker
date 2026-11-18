@@ -1,18 +1,24 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
-import { Bell, BellRing, Compass, ListChecks, Sparkles } from "lucide-react";
+import { useState, useSyncExternalStore } from "react";
+import { Bell, BellRing, Compass, ListChecks, Sparkles, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 
 import { useEngagement } from "@/components/onboarding/EngagementProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  notificationPermission,
+  type NotifyPermission,
+  requestNotificationPermission,
+  showSystemNotification,
+} from "@/lib/notify";
 import { setChecklistHidden, useEngagementStore, writePrefs } from "@/lib/onboarding/prefs";
 import { cn } from "@/lib/utils";
 
 import { SettingsCard } from "./SettingsCard";
 
-type PermissionState = NotificationPermission | "unsupported" | "unknown";
+type PermissionState = NotifyPermission | "unknown";
 
 const PERMISSION_EVENT = "notification-permission-change";
 
@@ -22,15 +28,33 @@ function useNotificationPermission(): PermissionState {
     (onChange) => {
       window.addEventListener(PERMISSION_EVENT, onChange);
       window.addEventListener("focus", onChange);
+      document.addEventListener("visibilitychange", onChange);
+      // Chrome/Edge/Brave report changes made in the site settings while the page is open.
+      let status: PermissionStatus | null = null;
+      navigator.permissions
+        ?.query({ name: "notifications" })
+        .then((s) => {
+          status = s;
+          s.addEventListener("change", onChange);
+        })
+        .catch(() => {});
       return () => {
         window.removeEventListener(PERMISSION_EVENT, onChange);
         window.removeEventListener("focus", onChange);
+        document.removeEventListener("visibilitychange", onChange);
+        status?.removeEventListener("change", onChange);
       };
     },
-    () => (typeof Notification === "undefined" ? "unsupported" : Notification.permission),
+    notificationPermission,
     () => "unknown",
   );
 }
+
+/** "20:00" → "8:00 pm". */
+const formatTime = (hhmm: string) => {
+  const [h, m] = hhmm.split(":").map(Number);
+  return new Date(2000, 0, 1, h, m).toLocaleTimeString("en-GB", { hour: "numeric", hour12: true, minute: "2-digit" });
+};
 
 function Toggle({ checked, disabled, id, onChange }: { checked: boolean; disabled?: boolean; id: string; onChange: (value: boolean) => void }) {
   return (
@@ -56,17 +80,18 @@ function Toggle({ checked, disabled, id, onChange }: { checked: boolean; disable
 
 function Row({ children, description, htmlFor, icon: Icon, title }: { children: React.ReactNode; description: string; htmlFor: string; icon: typeof Bell; title: string }) {
   return (
-    <div className="flex items-center gap-3 py-3.5 first:pt-0 last:pb-0">
+    // Controls drop under the text on narrow screens instead of squeezing it.
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3.5 first:pt-0 last:pb-0">
       <span className="bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-lg">
         <Icon className="size-4" aria-hidden />
       </span>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 basis-56">
         <label htmlFor={htmlFor} className="block text-sm font-medium">
           {title}
         </label>
         <p className="text-muted-foreground text-xs leading-5">{description}</p>
       </div>
-      <div className="flex shrink-0 items-center gap-2">{children}</div>
+      <div className="ml-auto flex shrink-0 items-center gap-2">{children}</div>
     </div>
   );
 }
@@ -77,36 +102,43 @@ export function NotificationSettings({ className }: { className?: string }) {
   const permission = useNotificationPermission();
   const engagement = useEngagement();
 
-  const allow = async () => {
-    const result = await Notification.requestPermission();
+  const [testing, setTesting] = useState(false);
+
+  const allow = async (): Promise<PermissionState> => {
+    const result = await requestNotificationPermission();
     window.dispatchEvent(new Event(PERMISSION_EVENT));
-    if (result === "granted") toast.success("Notifications are on", { description: "Reminders can reach you even when this tab is in the background." });
-    else toast.warning("Notifications not allowed", { description: "You’ll still get pop-ups while the app is open." });
+    if (result === "granted") toast.success("Notifications are on", { description: "Reminders and alerts can reach you even when this tab is in the background." });
+    else if (result === "denied") toast.warning("Notifications are blocked", { description: "You’ll still get pop-ups while the app is open. You can allow them in the site settings." });
+    return result;
   };
 
-  const test = () => {
-    const title = "This is how reminders look";
-    const body = "Tap to open Daily Expenses and add today’s spending.";
-    if (permission === "granted") {
-      try {
-        const n = new Notification(title, { body, icon: "/icon.svg" });
-        n.onclick = () => {
-          window.focus();
-          n.close();
-        };
+  const test = async () => {
+    setTesting(true);
+    try {
+      let current: PermissionState = notificationPermission();
+      if (current === "default") current = await allow();
+      const title = "This is how reminders look";
+      const body = "Tap to open Daily Expenses and add today’s spending.";
+      if (current === "granted" && (await showSystemNotification(title, { body, tag: "test", url: "/expenses" }))) {
+        toast.success("Test notification sent", {
+          description:
+            "Didn’t see it? Your computer may be hiding notifications from this browser — on a Mac, check System Settings → Notifications, and turn off Focus / Do Not Disturb.",
+          duration: 10_000,
+        });
         return;
-      } catch {
-        // Some browsers (e.g. Android Chrome) only allow notifications from a service worker.
       }
+      // Not allowed or not supported: show what the in-app version looks like.
+      toast.info(title, { description: body });
+    } finally {
+      setTesting(false);
     }
-    toast.info(title, { description: body });
   };
 
   const permissionText: Record<PermissionState, string> = {
     default: "Not set up yet — allow them to get reminders when this tab is in the background.",
     denied: "Blocked in this browser. To turn them on, open the site settings (the icon left of the address) and allow notifications.",
     granted: "Allowed on this device.",
-    unknown: "Checking…",
+    unknown: "Checking what this browser allows…",
     unsupported: "This browser doesn’t support notifications — you’ll get pop-ups while the app is open.",
   };
 
@@ -118,8 +150,22 @@ export function NotificationSettings({ className }: { className?: string }) {
       description="Gentle nudges so the app keeps working for you. Saved on this device."
     >
       <div className="divide-y">
-        <Row htmlFor="pref-tips" icon={Sparkles} title="One tip a day" description="A short “did you know…” pop-up about a feature you haven’t tried yet.">
+        <Row htmlFor="pref-tips" icon={Sparkles} title="Tips & quick questions" description="One “did you know…” tip and one quick check-in question a day, like “did you spend anything today?”">
           <Toggle id="pref-tips" checked={prefs.tips} disabled={!ready} onChange={(tips) => writePrefs({ tips })} />
+        </Row>
+
+        <Row
+          htmlFor="pref-spending"
+          icon={TrendingUp}
+          title="Spending alerts"
+          description="A heads-up when something stands out: a big expense, a busy day, a category past last month, or your monthly pace."
+        >
+          <Toggle
+            id="pref-spending"
+            checked={prefs.spendingAlerts}
+            disabled={!ready}
+            onChange={(spendingAlerts) => writePrefs({ spendingAlerts })}
+          />
         </Row>
 
         <Row htmlFor="pref-reminder" icon={Bell} title="Daily reminder" description="A nudge to log what you spent today, at the time you choose.">
@@ -129,7 +175,7 @@ export function NotificationSettings({ className }: { className?: string }) {
             value={prefs.reminderTime}
             disabled={!ready || !prefs.dailyReminder}
             onChange={(e) => e.target.value && writePrefs({ reminderTime: e.target.value })}
-            className="h-8 w-28"
+            className="h-9 w-36 tabular-nums"
           />
           <Toggle
             id="pref-reminder"
@@ -137,7 +183,12 @@ export function NotificationSettings({ className }: { className?: string }) {
             disabled={!ready}
             onChange={(dailyReminder) => {
               writePrefs({ dailyReminder });
-              if (dailyReminder && permission === "default") void allow();
+              if (dailyReminder) {
+                toast.success(`Daily reminder set for ${formatTime(prefs.reminderTime)}`, {
+                  description: "While the app is open you’ll get a pop-up; with notifications allowed, it reaches you in the background too.",
+                });
+                if (notificationPermission() === "default") void allow();
+              }
             }}
           />
         </Row>
@@ -158,8 +209,8 @@ export function NotificationSettings({ className }: { className?: string }) {
                 Allow
               </Button>
             )}
-            <Button size="sm" variant="outline" onClick={test} disabled={permission === "unknown"}>
-              Send a test
+            <Button size="sm" variant="outline" onClick={() => void test()} disabled={testing}>
+              {testing ? "Sending…" : "Send a test"}
             </Button>
           </div>
         </div>

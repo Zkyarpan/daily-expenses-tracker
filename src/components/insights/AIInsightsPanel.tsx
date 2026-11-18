@@ -20,6 +20,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Insight, InsightKind, InsightsFallbackReason, InsightsResponse } from "@/entities/Insights";
 import { useSpendingInsights } from "@/hooks/insights/useSpendingInsights";
+import { withCurrencySymbol } from "@/lib/currency";
 import { getIsDemoMode } from "@/lib/supabase";
 import { cn, formatCurrency } from "@/lib/utils";
 
@@ -80,8 +81,8 @@ const InsightCard = ({ insight }: { insight: Insight }) => {
         <p className={cn("text-[10px] font-semibold uppercase tracking-wider", style.text)}>
           {style.label}
         </p>
-        <p className="text-sm font-semibold leading-snug">{insight.title}</p>
-        <p className="text-xs leading-relaxed text-muted-foreground">{insight.detail}</p>
+        <p className="text-sm font-semibold leading-snug">{withCurrencySymbol(insight.title)}</p>
+        <p className="text-xs leading-relaxed text-muted-foreground">{withCurrencySymbol(insight.detail)}</p>
       </div>
     </li>
   );
@@ -139,7 +140,7 @@ export function AIInsightsPanel() {
 
   return (
     <Card className="shadow-sm" aria-labelledby="ai-insights-title">
-      <CardHeader className="flex flex-col gap-4 pb-4 lg:flex-row lg:items-start lg:justify-between">
+      <CardHeader className="flex flex-col gap-4 px-4 pb-4 sm:px-6 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <CardTitle
             id="ai-insights-title"
@@ -154,7 +155,7 @@ export function AIInsightsPanel() {
             Practical recommendations based on your monthly totals, categories and budgets.
           </CardDescription>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 max-sm:[&>button]:w-full lg:w-auto">
           <MonthYearSelector
             currentMonth={period.month0}
             currentYear={period.year}
@@ -179,7 +180,7 @@ export function AIInsightsPanel() {
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 px-4 sm:px-6">
         <p className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
           <Lock className="mt-0.5 size-3 shrink-0" aria-hidden />
           Only aggregated figures (monthly totals, category totals and budgets) are sent to the AI.
@@ -230,7 +231,7 @@ export function AIInsightsPanel() {
         {result && !insights.isPending && (
           <div className="space-y-4" aria-live="polite">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <p className="text-sm font-semibold leading-relaxed">{result.headline}</p>
+              <p className="text-sm font-semibold leading-relaxed">{withCurrencySymbol(result.headline)}</p>
               <div className="flex shrink-0 gap-1.5">
                 {result.source === "ai" ? (
                   <Badge variant="secondary" className="gap-1 text-[10px]">

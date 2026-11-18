@@ -13,6 +13,7 @@ import { toast } from "sonner";
 
 import { createColumns } from "@/app/(protected)/expenses/columns";
 import { DataTable } from "@/app/(protected)/expenses/data-table";
+import { ExpenseMobileRow } from "@/components/expenses/ExpenseMobileRow";
 import { StandardFormatMapping } from "@/components/import-expenses/StandardFormatMapping";
 import { StandardWithCategoryMapping } from "@/components/import-expenses/StandardWithCategoryMapping";
 import { WideFormatMappingComponent } from "@/components/import-expenses/WideFormatMapping";
@@ -394,6 +395,20 @@ function PreviewStep() {
       <DataTable
         embedded
         data={mappedData}
+        renderMobileRow={(row) => (
+          <ExpenseMobileRow
+            key={row.id}
+            categories={DEFAULT_CATEGORIES}
+            expense={row.original}
+            members={DEFAULT_MEMBERS}
+            onCategoryChange={(categoryId) =>
+              setMappedData(
+                mappedData.map((item) => (item.id === row.original.id ? { ...item, categoryId } : item)),
+              )
+            }
+            onDelete={(expense) => setMappedData(mappedData.filter((item) => item.id !== expense.id))}
+          />
+        )}
         columns={createColumns({
           categories: DEFAULT_CATEGORIES,
           members: DEFAULT_MEMBERS,

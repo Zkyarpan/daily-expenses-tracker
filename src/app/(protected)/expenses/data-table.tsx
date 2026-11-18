@@ -11,6 +11,7 @@ import {
   getSortedRowModel,
   OnChangeFn,
   PaginationState,
+  Row,
   RowSelectionState,
   SortingState,
   useReactTable,
@@ -18,6 +19,7 @@ import {
 import { ReceiptText, Search, X } from "lucide-react";
 
 import { DataTablePagination } from "@/components/expenses/TablePagination";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -28,6 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 interface DataTableProps<TData extends { id: string | number }, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -39,6 +42,11 @@ interface DataTableProps<TData extends { id: string | number }, TValue> {
   isLoading?: boolean;
   /** Inside another card: use a light border instead of a raised card. */
   embedded?: boolean;
+  /**
+   * Phones (below `md`) show these list rows instead of the wide table, so
+   * nothing scrolls sideways. Return an `<li>`.
+   */
+  renderMobileRow?: (row: Row<TData>) => React.ReactNode;
 }
 
 export function DataTable<TData extends { id: string | number }, TValue>({
@@ -50,6 +58,7 @@ export function DataTable<TData extends { id: string | number }, TValue>({
   goToLastPage = false,
   isLoading = false,
   embedded = false,
+  renderMobileRow,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -105,6 +114,32 @@ export function DataTable<TData extends { id: string | number }, TValue>({
     },
   });
 
+  const emptyState = (
+    <div className="flex flex-col items-center px-4 text-center">
+      <span className="bg-muted text-muted-foreground ring-border mb-4 flex size-12 items-center justify-center rounded-xl ring-1">
+        <ReceiptText className="size-5" aria-hidden />
+      </span>
+      <p className="text-base font-semibold">
+        {globalFilter ? "No matching expenses" : "No expenses this month"}
+      </p>
+      <p className="text-muted-foreground mt-1.5 text-sm">
+        {globalFilter
+          ? "Try a different word, or clear the search."
+          : "Use “Add expense” above, or import a bank statement."}
+      </p>
+    </div>
+  );
+
+  const container = embedded
+    ? "overflow-hidden rounded-xl border"
+    : "bg-card overflow-hidden rounded-2xl shadow-md";
+  const rows = table.getRowModel().rows;
+  // "Select all" on phones only when the page acts on the selection.
+  const selectable =
+    !isReadOnly &&
+    Boolean(onRowSelectionChange) &&
+    table.getAllLeafColumns().some((column) => column.id === "select");
+
   return (
     <div className="space-y-4">
       {/* Search bar */}
@@ -133,7 +168,48 @@ export function DataTable<TData extends { id: string | number }, TValue>({
           {table.getFilteredRowModel().rows.length} of {data.length} match &ldquo;{globalFilter}&rdquo;
         </p>
       )}
-      <div className={embedded ? "overflow-hidden rounded-xl border" : "bg-card overflow-hidden rounded-2xl shadow-md"}>
+      {renderMobileRow && (
+        <div className={cn(container, "md:hidden")}>
+          {selectable && rows.length > 0 && (
+            <div className="bg-muted/30 flex h-11 items-center justify-between border-b pr-4 pl-3">
+              <label className="flex cursor-pointer items-center gap-3 text-xs font-medium">
+                <Checkbox
+                  checked={
+                    table.getIsAllPageRowsSelected() ||
+                    (table.getIsSomePageRowsSelected() && "indeterminate")
+                  }
+                  onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                  aria-label="Select all on this page"
+                />
+                Select all
+              </label>
+              <span className="text-muted-foreground text-xs tabular-nums">
+                {table.getFilteredRowModel().rows.length}{" "}
+                {table.getFilteredRowModel().rows.length === 1 ? "item" : "items"}
+              </span>
+            </div>
+          )}
+          {isLoading ? (
+            <ul className="divide-y" aria-hidden>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <li key={i} className="flex items-center gap-3 px-4 py-3">
+                  <Skeleton className="size-10 rounded-xl" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-2/3" />
+                    <Skeleton className="h-3 w-1/3" />
+                  </div>
+                  <Skeleton className="h-4 w-14" />
+                </li>
+              ))}
+            </ul>
+          ) : rows.length ? (
+            <ul className="divide-y">{rows.map((row) => renderMobileRow(row))}</ul>
+          ) : (
+            <div className="py-12">{emptyState}</div>
+          )}
+        </div>
+      )}
+      <div className={cn(container, renderMobileRow && "hidden md:block")}>
         <Table>
           <TableHeader className="bg-muted/30">
             {table.getHeaderGroups().map((headerGroup) => (
@@ -184,19 +260,7 @@ export function DataTable<TData extends { id: string | number }, TValue>({
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="py-14">
-                  <div className="flex flex-col items-center text-center">
-                    <span className="bg-muted text-muted-foreground ring-border mb-4 flex size-12 items-center justify-center rounded-xl ring-1">
-                      <ReceiptText className="size-5" aria-hidden />
-                    </span>
-                    <p className="text-base font-semibold">
-                      {globalFilter ? "No matching expenses" : "No expenses this month"}
-                    </p>
-                    <p className="text-muted-foreground mt-1.5 text-sm">
-                      {globalFilter
-                        ? "Try a different word, or clear the search."
-                        : "Use “Add expense” above, or import a bank statement."}
-                    </p>
-                  </div>
+                  {emptyState}
                 </TableCell>
               </TableRow>
             )}
