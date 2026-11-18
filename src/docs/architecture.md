@@ -71,7 +71,8 @@ and write the relevant tables.
 - `*Mapping` components — format-specific column mapping UIs
 
 ### Layout
-- `AppSideBar` — collapsible sidebar with icon-only mode
+- `Navbar` — sticky top bar: logo, links, Money/Insights dropdowns, + New, search, alerts, theme, account menu (mobile: sheet menu)
+- `AppFooter` — site footer with navigation columns
 - `Navbar` — sticky top bar; hosts `CommandPalette` and theme toggle
 - `CommandPalette` — ⌘K global navigation dialog
 
@@ -86,7 +87,6 @@ and write the relevant tables.
 | UI state | `useState` in component — e.g. `showCharts`, `showAll`, `rowSelection` |
 | Chart order | `localStorage` via `useState` lazy init in `YearlyChartsGrid` |
 | Theme | `next-themes` |
-| Sidebar open | shadcn `SidebarProvider` + cookie persistence |
 | Import wizard | React Context (`CSVImportContext`) |
 
 ---

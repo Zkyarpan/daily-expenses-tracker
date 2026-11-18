@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { EnvelopeSimple } from "@phosphor-icons/react";
 import Link from "next/link";
+import { toast } from "sonner";
 
 import {
   AUTH_INPUT_CLASS,
@@ -19,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { friendlyAuthError } from "@/lib/authMessages";
 import { createClient } from "@/utils/supabase/client";
 
 const SIGNUP_HERO = {
@@ -62,7 +64,7 @@ export default function SignupPage() {
 
     const supabase = createClient();
     if (!supabase) {
-      setError("Authentication is not configured.");
+      toast.error("This isn’t available", { description: "Authentication is not configured on this server." });
       setLoading(false);
       return;
     }
@@ -77,11 +79,13 @@ export default function SignupPage() {
     });
 
     if (authError) {
-      setError(authError.message);
+      const { description, title } = friendlyAuthError("sign-up", authError.message);
+      toast.error(title, { description });
       setLoading(false);
       return;
     }
 
+    toast.success("Account created", { description: `We’ve sent a confirmation link to ${email}.` });
     setSuccess(true);
     setLoading(false);
   }

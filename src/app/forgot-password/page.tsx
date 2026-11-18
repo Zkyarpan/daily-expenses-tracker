@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ArrowLeft, EnvelopeSimple } from "@phosphor-icons/react";
 import Link from "next/link";
+import { toast } from "sonner";
 
 import {
   AUTH_INPUT_CLASS,
@@ -17,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { friendlyAuthError } from "@/lib/authMessages";
 import { createClient } from "@/utils/supabase/client";
 
 const RESET_HERO = {
@@ -48,7 +50,7 @@ export default function ForgotPasswordPage() {
 
     const supabase = createClient();
     if (!supabase) {
-      setError("Authentication is not configured.");
+      toast.error("This isn’t available", { description: "Authentication is not configured on this server." });
       setLoading(false);
       return;
     }
@@ -58,11 +60,13 @@ export default function ForgotPasswordPage() {
     });
 
     if (authError) {
-      setError(authError.message);
+      const { description, title } = friendlyAuthError("reset", authError.message);
+      toast.error(title, { description });
       setLoading(false);
       return;
     }
 
+    toast.success("Reset link sent", { description: `Check ${email} for a link to choose a new password.` });
     setSuccess(true);
     setLoading(false);
   }

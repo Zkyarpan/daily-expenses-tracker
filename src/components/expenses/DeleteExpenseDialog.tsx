@@ -8,7 +8,7 @@
  */
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -61,7 +61,7 @@ export function DeleteExpenseDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <AlertDialogContent>
+      <AlertDialogContent icon={<Trash2 aria-hidden />}>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete expense?</AlertDialogTitle>
           <AlertDialogDescription>

@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 
 import {
   AUTH_INPUT_CLASS,
@@ -17,6 +18,7 @@ import {
 import { startRouteProgress } from "@/components/layout/RouteProgress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { friendlyAuthError } from "@/lib/authMessages";
 import { createClient } from "@/utils/supabase/client";
 
 function LoginForm() {
@@ -33,26 +35,34 @@ function LoginForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!email.trim() || !password) {
+      setError("Enter your email address and password.");
+      return;
+    }
     setLoading(true);
 
     const supabase = createClient();
     if (!supabase) {
-      setError("Authentication is not configured.");
+      toast.error("Sign-in isn’t available", { description: "Authentication is not configured on this server." });
       setLoading(false);
       return;
     }
 
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email,
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
       password,
     });
 
     if (authError) {
-      setError(authError.message);
+      const { description, title } = friendlyAuthError("sign-in", authError.message);
+      toast.error(title, { description });
       setLoading(false);
       return;
     }
 
+    const fullName = data.user?.user_metadata?.full_name;
+    const firstName = typeof fullName === "string" ? fullName.trim().split(/\s+/)[0] : "";
+    toast.success(firstName ? `Welcome back, ${firstName}` : "Welcome back", { description: "You’re signed in." });
     startRouteProgress();
     router.push(next);
     router.refresh();

@@ -16,13 +16,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import {
-  validateCreateExpenseInput,
-  validateUpdateExpenseInput,
-  validateAmount,
-  validateDate,
-} from "../src/lib/expenseValidation.js";
 import type { CreateExpenseInput } from "../src/entities/Expense.js";
+import {
+  validateAmount,
+  validateCreateExpenseInput,
+  validateDate,
+  validateUpdateExpenseInput,
+} from "../src/lib/expenseValidation.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -144,7 +144,7 @@ describe("UPDATE — input validation", () => {
   });
 
   it("validates amount if provided", () => {
-    const r = validateUpdateExpenseInput({ id: "uuid", amount: 0 });
+    const r = validateUpdateExpenseInput({ amount: 0, id: "uuid" });
     assert.equal(r.valid, false);
   });
 
@@ -154,7 +154,7 @@ describe("UPDATE — input validation", () => {
   });
 
   it("validates date if provided", () => {
-    const r = validateUpdateExpenseInput({ id: "uuid", date: "not-a-date" });
+    const r = validateUpdateExpenseInput({ date: "not-a-date", id: "uuid" });
     assert.equal(r.valid, false);
   });
 
@@ -164,7 +164,7 @@ describe("UPDATE — input validation", () => {
   });
 
   it("validates description length if provided", () => {
-    const r = validateUpdateExpenseInput({ id: "uuid", description: "a".repeat(501) });
+    const r = validateUpdateExpenseInput({ description: "a".repeat(501), id: "uuid" });
     assert.equal(r.valid, false);
   });
 });

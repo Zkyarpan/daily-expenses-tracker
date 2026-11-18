@@ -24,8 +24,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
-  buildAlertId,
   BudgetLike,
+  buildAlertId,
   computeSpentPercent,
   computeThreshold,
   generateAlertFromBudget,
@@ -64,16 +64,18 @@ describe("computeThreshold", () => {
     assert.equal(computeThreshold(100, 100), "critical");
   });
 
-  it("returns 'over' above 100%", () => {
-    assert.equal(computeThreshold(100.01, 100), "over");
+  // Over-budget is "critical" (spec: 100 % or more → critical). The retired
+  // separate "over" level produced a second alert for the same category.
+  it("returns 'critical' just above 100%", () => {
+    assert.equal(computeThreshold(100.01, 100), "critical");
   });
 
-  it("returns 'over' at 150%", () => {
-    assert.equal(computeThreshold(150, 100), "over");
+  it("returns 'critical' at 150%", () => {
+    assert.equal(computeThreshold(150, 100), "critical");
   });
 
-  it("returns 'over' at 200%", () => {
-    assert.equal(computeThreshold(200, 100), "over");
+  it("returns 'critical' at 200%", () => {
+    assert.equal(computeThreshold(200, 100), "critical");
   });
 
   it("returns null when limit is zero (no valid budget)", () => {
@@ -96,8 +98,8 @@ describe("computeThreshold", () => {
     assert.equal(computeThreshold(500, 500), "critical");
   });
 
-  it("works with decimal limits — over at 101% of £500", () => {
-    assert.equal(computeThreshold(505, 500), "over");
+  it("works with decimal limits — critical at 101% of £500", () => {
+    assert.equal(computeThreshold(505, 500), "critical");
   });
 
   it("returns 'warning' at exactly 80 pence of £1 budget", () => {
@@ -231,10 +233,10 @@ describe("generateAlertFromBudget", () => {
     assert.equal(result!.threshold, "critical");
   });
 
-  it("generates an over alert above 100%", () => {
+  it("generates a critical alert above 100%", () => {
     const result = generateAlertFromBudget({ ...baseInput, spentAmount: 250 });
     assert.notEqual(result, null);
-    assert.equal(result!.threshold, "over");
+    assert.equal(result!.threshold, "critical");
   });
 
   it("alert has correct userId, year, month, categoryId, categoryName", () => {
@@ -389,7 +391,7 @@ describe("generateAlerts", () => {
     assert.equal(first[0].id, second[0].id, "IDs must match — no duplicate");
   });
 
-  it("generates a new 'over' alert when spending crosses 100%", () => {
+  it("generates a new 'critical' alert when spending crosses 100%", () => {
     // Start at warning
     const warningBudget = { ...grocery };
     const first = generateAlerts(userId, [warningBudget], new Map());
@@ -400,9 +402,9 @@ describe("generateAlerts", () => {
     const existingMap = new Map([[first[0].id, first[0]]]);
     const second = generateAlerts(userId, [overBudget], existingMap);
 
-    // New alert has 'over' threshold; old 'warning' alert remains in existingMap
+    // New alert has 'critical' threshold (reconcileMonthAlerts drops the old warning)
     assert.equal(second.length, 1);
-    assert.equal(second[0].threshold, "over");
+    assert.equal(second[0].threshold, "critical");
     assert.notEqual(second[0].id, first[0].id, "Different IDs for different thresholds");
   });
 
@@ -528,10 +530,26 @@ describe("getAlertTitle", () => {
     assert.ok(title.includes("Takeout"));
   });
 
-  it("over threshold shows 'Over budget!'", () => {
-    const title = getAlertTitle({ categoryName: "Shopping", threshold: "over" });
+  it("critical above the limit shows 'Over budget'", () => {
+    const title = getAlertTitle({
+      categoryName: "Shopping",
+      limitAmount: 100,
+      spentAmount: 150,
+      threshold: "critical",
+    });
     assert.ok(title.includes("Over budget"));
     assert.ok(title.includes("Shopping"));
+  });
+
+  it("critical exactly at the limit shows 'Budget reached', not 'Over budget'", () => {
+    const title = getAlertTitle({
+      categoryName: "Shopping",
+      limitAmount: 100,
+      spentAmount: 100,
+      threshold: "critical",
+    });
+    assert.ok(title.includes("Budget reached"));
+    assert.ok(!title.includes("Over budget"));
   });
 });
 
@@ -560,9 +578,9 @@ describe("getAlertDescription", () => {
     assert.ok(desc.includes("100%"), `Expected 100%. Got: ${desc}`);
   });
 
-  it("over description mentions the spent amount", () => {
+  it("over-budget critical description mentions the spent amount", () => {
     const desc = getAlertDescription(
-      { limitAmount: 200, spentAmount: 250, spentPercent: 125, threshold: "over" },
+      { limitAmount: 200, spentAmount: 250, spentPercent: 125, threshold: "critical" },
       fmt,
     );
     assert.ok(desc.includes("£250.00"), `Expected spent amount. Got: ${desc}`);
@@ -583,9 +601,6 @@ describe("getAlertVariant", () => {
     assert.equal(getAlertVariant("critical"), "destructive");
   });
 
-  it("over → 'destructive' variant", () => {
-    assert.equal(getAlertVariant("over"), "destructive");
-  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -599,8 +614,8 @@ describe("Integration: threshold crossing on expense change", () => {
     categoryName: "Grocery",
     limitAmount: 200,
     month: 11,
-    year: 2025,
     spent: 0,
+    year: 2025,
   };
 
   it("no alert when at 0% spending", () => {
@@ -631,10 +646,10 @@ describe("Integration: threshold crossing on expense change", () => {
     assert.equal(results[0].threshold, "critical");
   });
 
-  it("over fires above 100% — expense added pushes over limit", () => {
+  it("critical fires above 100% — expense added pushes over limit", () => {
     const results = generateAlerts(userId, [{ ...base, spent: 201 }], new Map());
     assert.equal(results.length, 1);
-    assert.equal(results[0].threshold, "over");
+    assert.equal(results[0].threshold, "critical");
   });
 
   it("expense deletion reducing spend from over to warning generates warning alert", () => {
@@ -724,8 +739,8 @@ describe("Edge cases", () => {
       { categoryId: "3", categoryName: "Misc",    limitAmount: 50,  month: 11, spent: 25,  year: 2025 },
     ];
     const results = generateAlerts("u1", budgets, new Map());
-    assert.equal(results.length, 2); // Grocery (warning), Takeout (over), Misc (no alert)
+    assert.equal(results.length, 2); // Grocery (warning), Takeout (critical), Misc (no alert)
     const thresholds = results.map((r) => r.threshold).sort();
-    assert.deepEqual(thresholds, ["over", "warning"]);
+    assert.deepEqual(thresholds, ["critical", "warning"]);
   });
 });

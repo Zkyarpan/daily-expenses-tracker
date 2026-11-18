@@ -859,3 +859,212 @@ and [UI_UX_REDESIGN.md](UI_UX_REDESIGN.md).
 | Authenticated pages with real data | **Not verified.** The assistant cannot sign in; the shell change (user id from server) needs an owner sign-in check in Stage 3 |
 
 ---
+
+## Spending alerts not appearing (2026-11-13/14)
+
+**Report:** November 2026 expenses were recorded correctly (£1,201.78 in total, £1,000.00 of it
+Grocery), but no spending alert appeared.
+
+### Root cause
+
+Alerts were only ever **calculated on the Budgets page**. `useSpendingAlerts` was the only code
+that called `generateAlerts`, and only `budgets/page.tsx` mounted it. `AlertsProvider`, which feeds
+the header Alerts button and the Dashboard banner, only replayed what was already in localStorage.
+So a budget crossed from the Expenses page, an import or another device produced no alert, and no
+unread count, until the user happened to open Budgets for that month. A new browser or a cleared
+localStorage showed nothing at all.
+
+Category IDs were checked and are **not** the cause. Budgets and expenses both store the
+`DEFAULT_CATEGORIES` text ID (`"1"` = Grocery) on every write path: the expense dialog, bulk edit,
+CSV import and PDF import. Display names are only resolved for display.
+
+### Defects found and fixed
+
+| # | Defect | Fix |
+|---|---|---|
+| 1 | Alerts calculated only while `/budgets` was open (root cause above) | `AlertsProvider` renders a headless `CurrentMonthAlertSync` that runs `useBudgets(currentYear, currentMonth)` and recalculates on every protected page. It is a separate component, so query status changes re-render only it, not the provider or its consumers. The Budgets page also syncs the month it shows |
+| 2 | Stale alerts were never removed. The merge kept every stored alert, so raising a limit, deleting a budget or deleting expenses left the old alert showing | New `reconcileMonthAlerts`: for the month being evaluated, the result is exactly the alerts the current budgets justify. Read/dismissed state and `createdAt` are kept while an alert's ID is unchanged |
+| 3 | Duplicate alerts for one category: `critical` at exactly 100 %, plus `over` above it, plus the old `warning`, all at once | Two levels, as specified: < 80 % normal, 80–99.99 % `warning`, ≥ 100 % `critical`. Over-budget is now a label on `critical` (`isOverBudget`), at most one alert per category and month. Stored `over` records from older builds are converted on load |
+| 4 | Thresholds compared raw floats, so a summed total such as `0.7 + 0.1` (0.7999…) missed 80 % | `computeThreshold` compares whole pence. Displayed percentages are unchanged |
+| 5 | Expense writes invalidated only the month the page showed. An expense dated "Today" while viewing October, an edit moving a date, or an import left the other month's cache, and its alerts, stale for up to 5 min (`staleTime`) | `invalidateSpendingQueries` invalidates every `["expenses", …]` month plus `["budgets"]` and `["yearly-expenses"]`. Only on-screen queries refetch |
+| 6 | Recalculation ran while queries were loading. `useBudgets` returns an empty placeholder until both queries settle | `useBudgets` exposes `isSuccess` (both queries). Sync runs only then, so a loading or failed query can never clear alerts |
+| 7 | Account isolation relied on the storage key alone. Records were not checked on load, and the budgets/expenses query keys are not user-scoped | `parseStoredAlerts` keeps only well-formed records whose `userId` matches the key. `saveStoredAlerts` filters by user. Recalculation runs only while the browser Supabase session equals the server-verified user, so another account's data or a signed-out empty result can never be written under a user's key during sign-out or an account switch |
+| 8 | Dismissed alerts were pruned 90 days after `createdAt`, then regenerated as new unread alerts when that month was evaluated again | Retention is by budget month (12 months). Older months are neither kept nor generated, so nothing comes back |
+| 9 | Budgets page called `useCurrentUser()`, a second client `getUser()` network round-trip, before its alerts could load, plus an extra render on every auth event | Uses the provider's verified user id. Also dropped a duplicate `useExpenses` call (`useBudgets` already makes it) |
+| 10 | Read/dismiss actions were implemented twice (context and hook) | One implementation in `src/lib/alertSync.ts`. Unchanged lists are not rewritten, so consumers do not re-render for nothing. A `storage` listener keeps read/dismissed state in step across tabs |
+| 11 | "Budget updated" toast showed the category ID ("1 limit set to …") | Shows the category name |
+
+No provider state is updated during render. All alert writes happen in effects or event handlers
+(`src/lib/alertSync.ts`), and the React Query cache notifies subscribers afterwards.
+
+**Preserved:** Supabase RLS and migrations are untouched. No `spending_alerts` table was created or
+applied, because alerts are derived from budgets plus expenses, which RLS already scopes per user.
+`calculateCategorySpending` arithmetic is unchanged; only its ID comparison now tolerates `1` vs
+`"1"` and whitespace, while display names still never match. The budget-with-spending join moved
+unchanged from `useBudgets` to `computeBudgetsWithSpending`. Analytics keeps its four statuses
+(`under`, `warning`, `critical`, `over`).
+
+### Files
+
+| File | Change |
+|---|---|
+| `src/lib/alertCalculation.ts` | Two-level thresholds in pence, `isOverBudget`, `reconcileMonthAlerts`, retention, `sameAlertLists`, display helpers |
+| `src/lib/alertStorage.ts` | Validated, user-checked `parseStoredAlerts`; legacy `over` conversion |
+| `src/lib/alertSync.ts` (new) | All alert writes: `syncMonthAlerts`, `loadAlertsIntoCache`, `updateAlerts`, read/dismiss helpers |
+| `src/lib/spendingQueries.ts` (new) | `invalidateSpendingQueries` |
+| `src/lib/budgetValidation.ts` | `normaliseCategoryId`, `sameCategoryId`, `computeBudgetsWithSpending` |
+| `src/lib/analytics.ts` | `budgetStatusFor` derives `over` via `isOverBudget` |
+| `src/entities/Alert.ts` | `AlertThreshold = "warning" \| "critical"` |
+| `src/hooks/alerts/useSpendingAlerts.ts` | `useActiveAlerts`, `useMonthAlertSync` (effect-only; replaces `useSpendingAlerts`) |
+| `src/hooks/budgets/useBudgets.ts` | Uses `computeBudgetsWithSpending`; adds `isSuccess` |
+| `src/hooks/expenses/useExpenseMutations.ts` | Uses `invalidateSpendingQueries` |
+| `src/components/providers/context/AlertsContext.tsx` | Current-month sync, session guard, cross-tab reload, exposes `syncUserId` |
+| `src/app/(protected)/budgets/page.tsx` | Uses context user and alerts; syncs the shown month |
+| `src/components/alerts/AlertsPanel.tsx`, `AlertBanner.tsx` | Over-budget label from `isOverBudget` |
+| `tests/spendingAlerts.test.ts` | `over` expectations updated to `critical` |
+| `tests/spendingAlertsSync.test.ts` (new) | 53 tests: thresholds, the £500/£1,000 case, category matching, account isolation, refresh, expense and budget create/edit/delete, invalidation, duplicates, read/dismiss, retention |
+
+### Verification
+
+| Check | Result |
+|---|---|
+| `npm test` | **448 pass, 0 fail** (was 395; 53 new, 1 obsolete `over` test removed, 1 added) |
+| £500 Grocery budget vs £1,000 Grocery spending | One unread **critical** alert, 200 %, "Grocery — Over budget", unread count 1 |
+| `npx tsc --noEmit` | 0 errors |
+| ESLint, whole project | 13 errors / 46 warnings (baseline 13 / 49). All 13 errors are pre-existing in lines this work did not change |
+| `next build --no-lint` (local copy) | Passes; `/budgets` First Load JS 261 kB |
+| Browser, production build, demo mode | `/`, `/budgets`, `/expenses`, `/analytics`, `/yearly-charts`, `/import-expenses`: 0 console errors or warnings, 0 exceptions; Alerts popover opens |
+| Browser, dev build, real `AlertsProvider` with seeded query data (scratch-only harness, session check bypassed because demo mode has no Supabase session) | Expense delete/edit, budget edit/create/delete, mark as read, dismiss and reload all gave the expected alerts and counts. One consumer render per change. **0 React warnings** (no "Cannot update a component while rendering a different component") |
+| Signed-in check against the live Supabase data | **Not verified.** The assistant cannot sign in. Owner check: open the Dashboard (not Budgets) in November 2026, and the Alerts button should show **1** with a critical Grocery alert |
+
+### Not changed (out of scope, pre-existing)
+
+- `react-hooks/set-state-in-effect` lint errors in the expenses table/page, `BudgetFormDialog`
+  (form reset when it opens), `magic-card` and `use-mobile`. These are local component state, not
+  provider state, and none is an alert defect.
+- `src/hooks/useCurrentUser.ts` is now unused; left in place.
+- `supabase/migrations/20240004000000_create_spending_alerts.sql` stays unapplied and unneeded.
+
+### Environment incident during this work
+
+- iCloud eviction recurred. `tsc` took 7 min in `~/Documents` (5 s in a local copy), and 164
+  `src/`/`tests/` files were dataless.
+- At 22:13 on 13 Nov, `node_modules` was emptied down to a `lucide-react` remnant, even though
+  the `com.apple.fileprovider.ignore#P` xattr was set on it. No command in this work wrote there.
+- An untracked iCloud conflict copy, `node_modules 2/` (1.0 GB, created 13 Nov 17:53), is still
+  in the project. It is the owner's call to delete; git ignores nothing about it, so it shows in
+  `git status`.
+- Restored with `npm ci` from the unchanged lockfile in a local folder, then moved in (506
+  packages, 0 dataless), and `npm test` re-run in place: 448 pass.
+- The durable fix is still to move the project out of `~/Documents` or free disk space.
+
+## Vercel deployment fails: "pnpm run build" exits 1 on ESLint errors (2026-11-18)
+
+### Symptom
+
+The Vercel build ran `pnpm run build` and exited with code 1. Its log showed 4 ESLint errors,
+14 warnings, and many `sort-keys-fix` warnings. The project now uses npm (`package-lock.json`).
+
+The Vercel log itself was not available here. The cause below was reproduced locally with
+the same `next build` lint step, on each branch Vercel could have built.
+
+### Root causes
+
+1. **ESLint errors fail `next build`.** Next 15 lints `src/` during `next build` and stops on
+   any *error*. Warnings, including every `sort-keys-fix` one, do not fail the build. Two
+   rules raised the blocking errors:
+   - `react-hooks/set-state-in-effect`, from `eslint-plugin-react-hooks` v7. It flags props
+     copied into state inside an effect: expenses table cells, the expenses page, the
+     `BudgetFormDialog` reset, `magic-card` and `use-mobile`.
+   - `simple-import-sort/imports`, for unsorted imports in 9 files.
+
+   | Code linted (npm install) | Errors | Warnings |
+   |---|---|---|
+   | `main` / `private/main` `1af8223` (has `pnpm-lock.yaml`) | 6 | 36 |
+   | Pushed `feature/dashboard-redesign` `18c5180` | 10 | 40 |
+   | Working tree before this fix | 15 | 39 |
+
+   Vercel's 4 / 14 most likely comes from `main` installed with pnpm. pnpm can resolve
+   slightly different ESLint plugin versions. The same two rules fail on every branch.
+2. **Vercel used pnpm.** `main` and older branches still contain `pnpm-lock.yaml`. Vercel picks
+   the package manager from the lockfile, or from an Install/Build Command override in the
+   dashboard. This branch has only `package-lock.json`. There was no `vercel.json` to pin the
+   commands.
+3. **Two duplicate dependency folders, not ignored by git.** `node_modules 2/` and
+   `node_modules 3/` are 1 GB iCloud/Finder copies, and `.gitignore` did not cover them. A
+   `git add -A` would have committed 2 GB. Locally, `tsconfig.json` (`**/*.ts`) and
+   `npm run lint` pick them up.
+
+### Fixes (no lint rule, type check or build step disabled)
+
+- **Package manager.** Added `vercel.json` with `installCommand: "npm ci"`,
+  `buildCommand: "npm run build"` and `framework: "nextjs"`. `vercel.json` takes priority over
+  the dashboard settings. This branch has no pnpm/yarn/bun lockfile, and `npm ci` installs
+  cleanly from `package-lock.json` (lockfile v3, in sync with `package.json`).
+- **set-state-in-effect.** Each fix keeps the same trigger as before:
+  - `expenses/columns.tsx` (amount and description cells), `expenses/page.tsx` (editable
+    copy) and `BudgetFormDialog.tsx` (reset when the dialog opens). These now use React's
+    "adjust state when a prop changes" pattern: compare the prop with the last synced value
+    during render, instead of in an effect.
+  - `hooks/use-mobile.ts` and `ui/magic-card.tsx` (`mounted`). These now use
+    `useSyncExternalStore`. It returns `false` on the server and during hydration, exactly as
+    before.
+- **Import order.** Ran `eslint --fix` in the 9 `src/` files and 4 test files. Only
+  `import` lines changed.
+- **Object key order (`sort-keys-fix`).** Every reordered object was checked first, and none
+  depends on key order:
+  - ExcelJS styles, Supabase insert payloads, `next/font` options, `ALERT_THRESHOLDS`,
+    returned hook objects, validation results, test fixtures and `next.config.ts`. All of
+    these are read by key.
+  - `transformToExpenseWithDetails`: the keys come after a spread, so the result's key order
+    is unchanged.
+
+  The autofix broke comment placement and indentation in `Alert.ts`, `utils.ts`, `useBudgets.ts`,
+  `useExpenses.ts` and `useExpenseMutations.ts`, so those blocks were rewritten by hand. The
+  returned key sets were checked against HEAD and are identical.
+- **Other warnings.**
+  - Removed two stale `eslint-disable` comments, in `apple-icon.tsx` and `opengraph-image.tsx`.
+  - Fixed 3 unused variables:
+    - `MonthYearSelector`: removed an unused `years` memo.
+    - `WideFormatMapping`: renamed `field` to `_field`.
+    - `MonthFilter`: dropped the unused `checked` argument.
+- **`eslint.config.mjs`** now ignores generated files only: `.next/**`, `out/**`, `build/**`
+  and `next-env.d.ts`. These are the same ignores as the create-next-app template. Without
+  them, `npm run lint` after a build linted the compiled output.
+- **`.gitignore`** now has `/node_modules */`, so the duplicate folders can never be committed.
+  The folders themselves were not deleted.
+
+### Verification
+
+| Check | Result |
+|---|---|
+| `eslint src` (what `next build` lints) | 0 errors, 1 warning (was 15 / 39) |
+| `npm run lint` (whole project) | Exit 0: 0 errors, 1 warning |
+| Remaining warning | `react-hooks/incompatible-library` on TanStack `useReactTable` (React Compiler skips that component). Informational; not fixable without replacing the library |
+| `tsc --noEmit` (src + tests) | 0 errors |
+| `npm test` | 548 pass, 0 fail |
+| Clean copy of the commit-ready tree: `npm ci` | Exit 0 (734 packages) |
+| Same copy: `npm run build` | Exit 0: compiled, lint + types passed, 31/31 pages generated |
+| Same copy, no `.env.local` | `npm run build` exit 0 (the app falls back to demo mode at runtime) |
+
+The build ran in a scratch copy, not the project folder, so the running `next dev` on port 3001
+kept its `.next`. The copy (which held a copy of `.env.local`) was deleted afterwards.
+
+### Still to do (owner)
+
+- **Commit and push** these changes. Vercel builds the pushed commit, not the working tree.
+  Production (`main`) still has `pnpm-lock.yaml` and the old lint errors until this branch is
+  merged.
+- **Check Vercel → Project → Settings → Build & Deployment.** `vercel.json` overrides the
+  commands, but any custom "pnpm" overrides there can be cleared. Also check that Node.js
+  Version is 20.x or later.
+- **Check Vercel → Environment Variables.** These must be set for Production, and for Preview
+  if used: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+  `POLLINATIONS_API_KEY` and `APP_PASSWORD`. Optional: `NEXT_PUBLIC_SITE_URL` and
+  `POLLINATIONS_VISION_MODEL`.
+- **Delete `node_modules 2/` and `node_modules 3/`.** They are untracked and 1 GB each. Until
+  they are gone, a local `next build` or `tsc` type-checks them too, because `tsconfig.json`
+  includes `**/*.ts`.
+- **Delete the broken git refs** `.git/refs/heads/feature/dashboard-redesign 2` and
+  `.git/refs/remotes/private/feature/dashboard-redesign 2`. They are iCloud conflict copies,
+  and git warns about them on every command.

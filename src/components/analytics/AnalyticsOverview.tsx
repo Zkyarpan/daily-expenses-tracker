@@ -1,118 +1,59 @@
 "use client";
 
-import { memo, type ReactNode } from "react";
+import { memo } from "react";
 import {
   ArrowDownRight,
   ArrowUpRight,
   CalendarRange,
-  CircleDollarSign,
   Info,
+  Layers,
   Minus,
   PiggyBank,
-  ReceiptText,
-  ShoppingBag,
+  Receipt,
   TrendingUp,
+  Wallet,
 } from "lucide-react";
 
-import { Card, CardContent, CardDescription } from "@/components/ui/card";
+import { Meter, type MeterTone } from "@/components/shared/Meter";
+import { Money } from "@/components/shared/Money";
+import { StatCard } from "@/components/shared/StatCard";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { BudgetsForYearsStatus } from "@/hooks/budgets/useBudgetsForYears";
-import { type AnalyticsOverview as Overview, budgetStatusFor } from "@/lib/analytics";
+import {
+  type AnalyticsOverview as Overview,
+  type BudgetStatus,
+  budgetStatusFor,
+} from "@/lib/analytics";
 import { LOCALE_CONFIG } from "@/lib/config";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency, getCategoryColor } from "@/lib/utils";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Building blocks
 // ─────────────────────────────────────────────────────────────────────────────
 
-type MetricCardProps = {
-  label: string;
-  /** Plain-language definition shown in an accessible tooltip. */
-  hint: string;
-  icon: ReactNode;
-  value: ReactNode;
-  footer?: ReactNode;
-};
-
-const MetricCard = ({ footer, hint, icon, label, value }: MetricCardProps) => (
-  <Card className="shadow-sm transition-shadow hover:shadow-md">
-    <CardContent className="p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1">
-            <CardDescription className="text-[10px] font-medium uppercase tracking-wider">
-              {label}
-            </CardDescription>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  className="rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label={`About ${label}`}
-                >
-                  <Info className="size-3" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-64 text-xs leading-5">{hint}</TooltipContent>
-            </Tooltip>
-          </div>
-          <div className="mt-1.5 truncate text-2xl font-semibold tabular-nums tracking-tight">
-            {value}
-          </div>
-          {footer && (
-            <div className="mt-1.5 text-xs text-muted-foreground">{footer}</div>
-          )}
-        </div>
-        <span className="shrink-0 text-muted-foreground" aria-hidden>
-          {icon}
-        </span>
-      </div>
-    </CardContent>
-  </Card>
+/** Card label with a plain-language definition in an accessible tooltip. */
+const InfoLabel = ({ hint, label }: { label: string; hint: string }) => (
+  <span className="inline-flex items-center gap-1">
+    {label}
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className="text-muted-foreground/70 hover:text-foreground focus-visible:ring-ring rounded-full focus-visible:ring-2 focus-visible:outline-none"
+          aria-label={`About ${label}`}
+        >
+          <Info className="size-3.5" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-64 text-xs leading-5">{hint}</TooltipContent>
+    </Tooltip>
+  </span>
 );
 
-/** Spending change badge: up is shown as a warning colour, down as positive. */
-export const ChangeIndicator = ({
-  pct,
-  suffix,
-}: {
-  pct: number | null;
-  suffix: string;
-}) => {
-  if (pct === null) {
-    return (
-      <span className="inline-flex items-center gap-1">
-        <Minus className="size-3" aria-hidden />
-        No spending to compare {suffix}
-      </span>
-    );
-  }
-  const rounded = Math.round(pct * 10) / 10;
-  const up = rounded > 0;
-  const flat = rounded === 0;
-  const Icon = flat ? Minus : up ? ArrowUpRight : ArrowDownRight;
-  return (
-    <span className="inline-flex items-center gap-1">
-      <span
-        className={cn(
-          "inline-flex items-center gap-0.5 font-medium",
-          !flat && up && "text-destructive",
-          !flat && !up && "text-success",
-        )}
-      >
-        <Icon className="size-3" aria-hidden />
-        <span className="sr-only">{flat ? "No change" : up ? "Up" : "Down"}</span>
-        {Math.abs(rounded).toFixed(1)}%
-      </span>
-      {suffix}
-    </span>
-  );
-};
-
-/** Currency value with the animated ticker for non-negative amounts. */
-const Money = ({ amount }: { amount: number }) =>
+/** Currency total with the animated ticker for non-negative amounts. */
+const AnimatedMoney = ({ amount }: { amount: number }) =>
   amount >= 0 ? (
     <span aria-label={formatCurrency(amount)}>
       <span aria-hidden>{LOCALE_CONFIG.symbol}</span>
@@ -124,15 +65,39 @@ const Money = ({ amount }: { amount: number }) =>
       />
     </span>
   ) : (
-    <span>{formatCurrency(amount)}</span>
+    <Money amount={amount} />
   );
 
-const BUDGET_TONE = {
-  critical: "bg-warning",
-  over: "bg-destructive",
-  under: "bg-success",
-  warning: "bg-warning/70",
-} as const;
+/** Signed percentage with an arrow: spending up is red, down is green. */
+const ChangeValue = ({ pct }: { pct: number }) => {
+  const rounded = Math.round(pct * 10) / 10;
+  const direction = rounded > 0 ? "up" : rounded < 0 ? "down" : "flat";
+  const Icon = direction === "up" ? ArrowUpRight : direction === "down" ? ArrowDownRight : Minus;
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1",
+        direction === "up" && "text-destructive",
+        direction === "down" && "text-success",
+      )}
+    >
+      <Icon className="size-5 shrink-0" aria-hidden />
+      <span className="sr-only">{direction === "flat" ? "No change" : direction === "up" ? "Up" : "Down"}</span>
+      {direction === "up" ? "+" : direction === "down" ? "−" : ""}
+      {Math.abs(rounded).toFixed(1)}%
+    </span>
+  );
+};
+
+/** Same thresholds as spending alerts and the budget report's status badges. */
+const BUDGET_METER_TONE: Record<BudgetStatus, MeterTone> = {
+  critical: "warning",
+  over: "critical",
+  under: "success",
+  warning: "warning",
+};
+
+const Dash = () => <span className="text-muted-foreground">—</span>;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Overview grid
@@ -155,103 +120,146 @@ const AnalyticsOverview = ({
   const mom = overview.monthOverMonth;
   const top = overview.highestCategory;
   const utilisation = overview.budgetUtilisation;
+  const hasBudgetData =
+    budgetsStatus !== "loading" &&
+    budgetsStatus !== "unavailable" &&
+    budgetsStatus !== "error" &&
+    utilisation !== null &&
+    !!budgetTotals;
 
   const budgetValue = (() => {
-    if (budgetsStatus === "loading") return <Skeleton className="h-8 w-24" />;
-    if (budgetsStatus === "unavailable" || budgetsStatus === "error" || utilisation === null) {
-      return <span className="text-muted-foreground">—</span>;
-    }
+    if (budgetsStatus === "loading") return <Skeleton className="h-7 w-20" />;
+    if (!hasBudgetData) return <Dash />;
     return `${utilisation.toFixed(1)}%`;
   })();
 
-  const budgetFooter = (() => {
+  const budgetHint = (() => {
     if (budgetsStatus === "loading") return "Loading budgets…";
     if (budgetsStatus === "unavailable") return "Budgets are not set up yet";
     if (budgetsStatus === "error") return "Budgets could not be loaded";
-    if (utilisation === null || !budgetTotals) return "No budgets in this period";
-    const tone = BUDGET_TONE[budgetStatusFor(budgetTotals.spent, budgetTotals.limit)];
-    return (
-      <div className="space-y-1.5">
-        <div
-          className="bg-muted h-1.5 overflow-hidden rounded-full"
-          role="progressbar"
-          aria-label="Budget utilisation"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={Math.min(100, Math.round(utilisation))}
-        >
-          <div className={cn("h-full rounded-full transition-all", tone)} style={{ width: `${Math.min(100, utilisation)}%` }} />
-        </div>
-        <span>
-          {formatCurrency(budgetTotals.spent)} of {formatCurrency(budgetTotals.limit)} budgeted
-        </span>
-      </div>
-    );
+    if (!hasBudgetData) return "No budgets in this period";
+    return undefined;
   })();
 
   return (
-    <section aria-label="Analytics overview" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      <MetricCard
-        label="Total spending"
-        hint="Sum of every expense in the selected period and categories. Refunds (negative amounts) reduce the total."
-        icon={<CircleDollarSign className="size-5" />}
-        value={<Money amount={overview.totalSpending} />}
-        footer={<ChangeIndicator pct={overview.periodChangePct} suffix={comparisonLabel} />}
+    <section aria-label="Analytics overview" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+      <StatCard
+        label={
+          <InfoLabel
+            label="Total spending"
+            hint="Sum of every expense in the selected period and categories. Refunds (negative amounts) reduce the total."
+          />
+        }
+        icon={Wallet}
+        value={<AnimatedMoney amount={overview.totalSpending} />}
+        delta={
+          overview.periodChangePct === null
+            ? undefined
+            : { goodDirection: "down", label: comparisonLabel, value: overview.periodChangePct }
+        }
+        hint={overview.periodChangePct === null ? `No spending to compare ${comparisonLabel}` : undefined}
       />
-      <MetricCard
-        label="Average monthly spending"
-        hint="Total spending divided by the number of months in the period that have started. Future months are not counted."
-        icon={<CalendarRange className="size-5" />}
-        value={formatCurrency(overview.averageMonthlySpending)}
-        footer={`Across ${overview.monthsCounted} ${overview.monthsCounted === 1 ? "month" : "months"}`}
+
+      <StatCard
+        label={
+          <InfoLabel
+            label="Monthly average"
+            hint="Total spending divided by the number of months in the period that have started. Future months are not counted."
+          />
+        }
+        icon={CalendarRange}
+        value={<Money amount={overview.averageMonthlySpending} />}
+        hint={`Across ${overview.monthsCounted} ${overview.monthsCounted === 1 ? "month" : "months"}`}
       />
-      <MetricCard
-        label="Highest spending category"
-        hint="The category with the largest total spending in the selected period."
-        icon={<ShoppingBag className="size-5" />}
-        value={top ? top.name : <span className="text-muted-foreground">—</span>}
-        footer={
-          top
-            ? `${formatCurrency(top.total)} · ${top.share.toFixed(0)}% of spending`
-            : "No spending in this period"
+
+      <StatCard
+        label={
+          <InfoLabel
+            label="Top category"
+            hint="The category with the largest total spending in the selected period."
+          />
+        }
+        icon={Layers}
+        value={top ? top.name : <Dash />}
+        hint={
+          top ? (
+            <span className="inline-flex items-center gap-1.5">
+              <span
+                className="size-2 shrink-0 rounded-full"
+                style={{ backgroundColor: getCategoryColor(top.name) }}
+                aria-hidden
+              />
+              {formatCurrency(top.total)} · {top.share.toFixed(0)}% of spending
+            </span>
+          ) : (
+            "No spending in this period"
+          )
         }
       />
-      <MetricCard
-        label="Budget utilisation"
-        hint="Spending in budgeted categories and months as a share of those budgets. 80% or more is a warning; over 100% is over budget, matching spending alerts."
-        icon={<PiggyBank className="size-5" />}
+
+      <StatCard
+        label={
+          <InfoLabel
+            label="Budget used"
+            hint="Spending in budgeted categories and months as a share of those budgets. 80% or more is a warning; over 100% is over budget, matching spending alerts."
+          />
+        }
+        icon={PiggyBank}
         value={budgetValue}
-        footer={budgetFooter}
-      />
-      <MetricCard
-        label="Transactions"
-        hint="Number of expense records in the selected period and categories."
-        icon={<ReceiptText className="size-5" />}
+        hint={budgetHint}
+      >
+        {hasBudgetData && (
+          <div className="mt-auto space-y-2 pt-0.5">
+            <Meter
+              size="sm"
+              label="Budget used"
+              value={utilisation}
+              tone={BUDGET_METER_TONE[budgetStatusFor(budgetTotals.spent, budgetTotals.limit)]}
+              valueText={`${formatCurrency(budgetTotals.spent)} of ${formatCurrency(budgetTotals.limit)} spent`}
+            />
+            <p className="text-muted-foreground text-xs tabular-nums">
+              {formatCurrency(budgetTotals.spent)} of {formatCurrency(budgetTotals.limit)}
+            </p>
+          </div>
+        )}
+      </StatCard>
+
+      <StatCard
+        label={
+          <InfoLabel
+            label="Transactions"
+            hint="Number of expense records in the selected period and categories."
+          />
+        }
+        icon={Receipt}
         value={overview.transactionCount.toLocaleString("en-GB")}
-        footer={
+        hint={
           overview.transactionCount > 0
-            ? `Average ${formatCurrency(overview.averageTransaction)} per transaction`
+            ? `Average ${formatCurrency(overview.averageTransaction)} each`
             : "No transactions in this period"
         }
       />
-      <MetricCard
-        label="Month-over-month"
-        hint="Spending in the latest month of the period that has started, compared with the calendar month before it."
-        icon={<TrendingUp className="size-5" />}
+
+      <StatCard
+        label={
+          <InfoLabel
+            label="Month over month"
+            hint="Spending in the latest month of the period that has started, compared with the calendar month before it."
+          />
+        }
+        icon={TrendingUp}
         value={
-          mom ? (
-            mom.changePct === null ? (
-              formatCurrency(mom.change)
-            ) : (
-              `${mom.changePct > 0 ? "+" : ""}${mom.changePct.toFixed(1)}%`
-            )
+          !mom ? (
+            <Dash />
+          ) : mom.changePct === null ? (
+            <Money amount={mom.change} signed />
           ) : (
-            <span className="text-muted-foreground">—</span>
+            <ChangeValue pct={mom.changePct} />
           )
         }
-        footer={
+        hint={
           mom
-            ? `${mom.current.label} (${formatCurrency(mom.current.total)}) vs ${mom.previous.label} (${formatCurrency(mom.previous.total)})`
+            ? `${mom.current.label} ${formatCurrency(mom.current.total)} vs ${mom.previous.label} ${formatCurrency(mom.previous.total)}`
             : "This period has not started yet"
         }
       />
@@ -260,11 +268,3 @@ const AnalyticsOverview = ({
 };
 
 export default memo(AnalyticsOverview);
-
-export const AnalyticsOverviewSkeleton = () => (
-  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-hidden>
-    {Array.from({ length: 6 }).map((_, i) => (
-      <Skeleton key={i} className="h-[124px] rounded-xl" />
-    ))}
-  </div>
-);

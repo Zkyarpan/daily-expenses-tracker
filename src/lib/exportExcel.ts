@@ -12,29 +12,29 @@ const ROW_ALT_BG = "FFEFF6FF"; // blue-50
 const BORDER_COLOR = "FF93C5FD"; // blue-300
 
 const headerFill: ExcelJS.Fill = {
-  type: "pattern",
-  pattern: "solid",
   fgColor: { argb: HEADER_BG },
+  pattern: "solid",
+  type: "pattern",
 };
 
 const totalsFill: ExcelJS.Fill = {
-  type: "pattern",
-  pattern: "solid",
   fgColor: { argb: TOTALS_BG },
+  pattern: "solid",
+  type: "pattern",
 };
 
 const altFill: ExcelJS.Fill = {
-  type: "pattern",
-  pattern: "solid",
   fgColor: { argb: ROW_ALT_BG },
+  pattern: "solid",
+  type: "pattern",
 };
 
 const thinBorder: ExcelJS.Borders = {
-  top: { style: "thin", color: { argb: BORDER_COLOR } },
-  left: { style: "thin", color: { argb: BORDER_COLOR } },
-  bottom: { style: "thin", color: { argb: BORDER_COLOR } },
-  right: { style: "thin", color: { argb: BORDER_COLOR } },
+  bottom: { color: { argb: BORDER_COLOR }, style: "thin" },
   diagonal: {},
+  left: { color: { argb: BORDER_COLOR }, style: "thin" },
+  right: { color: { argb: BORDER_COLOR }, style: "thin" },
+  top: { color: { argb: BORDER_COLOR }, style: "thin" },
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -43,7 +43,7 @@ function styleHeader(row: ExcelJS.Row) {
     cell.fill = headerFill;
     cell.font = { bold: true, color: { argb: HEADER_FG }, size: 11 };
     cell.border = thinBorder;
-    cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+    cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
   });
   row.height = 28;
 }

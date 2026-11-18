@@ -22,7 +22,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { SpendingAlert } from "@/entities/Alert";
-import { getAlertDescription,getAlertTitle } from "@/lib/alertCalculation";
+import { getAlertDescription, getAlertTitle, isOverBudget } from "@/lib/alertCalculation";
 import { formatCurrency } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -30,9 +30,11 @@ import { formatCurrency } from "@/lib/utils";
 // ---------------------------------------------------------------------------
 type Severity = "over" | "critical" | "warning";
 
+/** "over" is a critical alert whose spending is above the limit. */
 function getHighestSeverity(alerts: SpendingAlert[]): Severity {
-  if (alerts.some((a) => a.threshold === "over")) return "over";
-  if (alerts.some((a) => a.threshold === "critical")) return "critical";
+  const critical = alerts.filter((a) => a.threshold === "critical");
+  if (critical.some(isOverBudget)) return "over";
+  if (critical.length > 0) return "critical";
   return "warning";
 }
 

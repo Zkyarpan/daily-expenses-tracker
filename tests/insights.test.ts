@@ -191,7 +191,7 @@ describe("buildInsightsSummary — aggregation", () => {
   });
 
   it("an empty month returns zeros and no projections", () => {
-    const s = summaryFor({ expenses: [], budgets: [] });
+    const s = summaryFor({ budgets: [], expenses: [] });
     assert.equal(s.totals.spending, 0);
     assert.equal(s.totals.transactions, 0);
     assert.equal(s.totals.averageTransaction, 0);

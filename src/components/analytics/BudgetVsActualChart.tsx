@@ -5,29 +5,40 @@ import { AlertTriangle, PiggyBank } from "lucide-react";
 import Link from "next/link";
 import { Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from "recharts";
 
+import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { type ChartConfig, ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { BudgetsForYearsStatus } from "@/hooks/budgets/useBudgetsForYears";
 import type { BudgetStatus, BudgetSummary } from "@/lib/analytics";
-import { GREEN, ORANGE, RED } from "@/lib/config";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils";
 
-import { ChartEmptyState, moneyTooltipFormatter } from "./chartShared";
+import { AnalyticsPanel, ChartEmptyState, LegendSwatches, moneyTooltipFormatter, REFERENCE_FILL } from "./chartShared";
 
 const config = {
   actual: { color: "var(--chart-1)", label: "Actual" },
-  budget: { color: "var(--muted-foreground)", label: "Budget" },
+  budget: { color: REFERENCE_FILL, label: "Budget" },
 } satisfies ChartConfig;
 
 /** Actual bars are coloured by status — the same thresholds as spending alerts. */
 const STATUS_COLOR: Record<BudgetStatus, string> = {
-  critical: ORANGE,
-  over: RED,
-  under: GREEN,
-  warning: ORANGE,
+  critical: "var(--warning)",
+  over: "var(--destructive)",
+  under: "var(--success)",
+  warning: "var(--warning)",
 };
+
+const STATUS_LEGEND: { label: string; statuses: BudgetStatus[]; color: string }[] = [
+  { color: STATUS_COLOR.under, label: "On track", statuses: ["under"] },
+  { color: STATUS_COLOR.warning, label: "Near or at limit", statuses: ["warning", "critical"] },
+  { color: STATUS_COLOR.over, label: "Over budget", statuses: ["over"] },
+];
+
+const shortName = (name: string) => (name.length > 11 ? `${name.slice(0, 10)}…` : name);
+
+const tooltipFormatter = moneyTooltipFormatter(config, (key, payload) =>
+  key === "actual" && payload?.status ? STATUS_COLOR[payload.status as BudgetStatus] : undefined,
+);
 
 type BudgetVsActualChartProps = {
   summary: BudgetSummary | null;
@@ -40,8 +51,16 @@ const BudgetVsActualChart = ({ status, summary }: BudgetVsActualChartProps) => {
     [summary],
   );
 
+  const legend = useMemo(() => {
+    const present = new Set(data.map((d) => d.status));
+    return [
+      { color: REFERENCE_FILL, label: "Budget" },
+      ...STATUS_LEGEND.filter((s) => s.statuses.some((st) => present.has(st))),
+    ];
+  }, [data]);
+
   const body = (() => {
-    if (status === "loading") return <Skeleton className="h-[280px] w-full rounded-lg" />;
+    if (status === "loading") return <Skeleton className="h-[300px] w-full rounded-xl" />;
     if (status === "unavailable") {
       return (
         <ChartEmptyState
@@ -80,38 +99,60 @@ const BudgetVsActualChart = ({ status, summary }: BudgetVsActualChartProps) => {
       );
     }
     return (
-      <ChartContainer config={config} className="aspect-auto h-[280px] w-full">
-        <BarChart accessibilityLayer data={data} margin={{ left: 4, right: 4 }} barGap={4}>
-          <CartesianGrid vertical={false} strokeDasharray="3 3" />
-          <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} interval={0} tick={{ fontSize: 11 }} />
-          <YAxis tickLine={false} axisLine={false} width={56} tickFormatter={(v) => formatCurrencyCompact(v)} />
-          <ChartTooltip content={<ChartTooltipContent formatter={moneyTooltipFormatter(config)} />} />
-          <ChartLegend content={<ChartLegendContent />} />
-          <Bar dataKey="budget" fill="var(--color-budget)" fillOpacity={0.35} radius={[4, 4, 0, 0]} maxBarSize={28} />
-          <Bar dataKey="actual" fill="var(--color-actual)" radius={[4, 4, 0, 0]} maxBarSize={28}>
-            {data.map((d) => (
-              <Cell key={d.name} fill={STATUS_COLOR[d.status]} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ChartContainer>
+      <div className="flex flex-1 flex-col">
+        <ChartContainer config={config} className="aspect-auto h-[272px] w-full">
+          <BarChart accessibilityLayer data={data} margin={{ left: 0, right: 0, top: 8 }} barGap={3}>
+            <CartesianGrid vertical={false} />
+            <XAxis
+              dataKey="name"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={10}
+              interval={0}
+              tick={{ fontSize: 11 }}
+              tickFormatter={shortName}
+            />
+            <YAxis tickLine={false} axisLine={false} width={52} tickFormatter={(v) => formatCurrencyCompact(v)} />
+            <ChartTooltip content={<ChartTooltipContent formatter={tooltipFormatter} />} />
+            <Bar dataKey="budget" fill="var(--color-budget)" radius={[4, 4, 0, 0]} maxBarSize={28} />
+            <Bar dataKey="actual" fill="var(--color-actual)" radius={[4, 4, 0, 0]} maxBarSize={28}>
+              {data.map((d) => (
+                <Cell key={d.name} fill={STATUS_COLOR[d.status]} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ChartContainer>
+        <LegendSwatches items={legend} />
+      </div>
     );
   })();
 
+  const hasRows = !!summary && summary.rows.length > 0;
+
   return (
-    <Card className="min-w-0 shadow-none">
-      <CardHeader>
-        <CardTitle>Budget versus actual</CardTitle>
-        <CardDescription>
-          {summary && summary.rows.length > 0
-            ? `${formatCurrency(summary.totalSpent)} spent of ${formatCurrency(summary.totalLimit)} budgeted${
-                summary.overBudgetCount > 0 ? ` · ${summary.overBudgetCount} over budget` : ""
-              }`
-            : "Monthly category budgets compared with actual spending"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>{body}</CardContent>
-    </Card>
+    <AnalyticsPanel
+      title="Budget versus actual"
+      description={
+        hasRows
+          ? `${formatCurrency(summary.totalSpent)} spent of ${formatCurrency(summary.totalLimit)} budgeted`
+          : "Monthly category budgets compared with actual spending"
+      }
+      action={
+        hasRows && status === "ready" ? (
+          summary.overBudgetCount > 0 ? (
+            <StatusBadge tone="critical" dot>
+              {summary.overBudgetCount} over budget
+            </StatusBadge>
+          ) : (
+            <StatusBadge tone="success" dot>
+              All within budget
+            </StatusBadge>
+          )
+        ) : undefined
+      }
+    >
+      {body}
+    </AnalyticsPanel>
   );
 };
 

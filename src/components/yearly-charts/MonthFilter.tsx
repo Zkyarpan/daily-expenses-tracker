@@ -113,7 +113,7 @@ const MonthFilter = ({
                   <Checkbox
                     id={`month-${month.value}`}
                     checked={isSelected}
-                    onCheckedChange={(checked) => {
+                    onCheckedChange={() => {
                       handleToggle(month.value);
                     }}
                     onClick={(e) => e.stopPropagation()}

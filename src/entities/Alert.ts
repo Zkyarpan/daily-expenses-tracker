@@ -16,15 +16,24 @@
 // Threshold levels
 // ---------------------------------------------------------------------------
 
-/** The two threshold levels that trigger an alert. */
-export type AlertThreshold = "warning" | "critical" | "over";
+/**
+ * The two threshold levels that trigger an alert:
+ *   below 80 %       → normal (no alert)
+ *   80 % – 99.99 %   → "warning"
+ *   100 % or more    → "critical" (includes over-budget; see isOverBudget())
+ *
+ * Earlier builds also stored a separate "over" level for > 100 %. That gave
+ * two alerts for one category (one at exactly 100 %, another just above) and
+ * is folded into "critical"; alertStorage converts stored "over" records.
+ */
+export type AlertThreshold = "warning" | "critical";
 
 /** Percentage trigger points — deterministic, never AI-derived. */
 export const ALERT_THRESHOLDS = {
-  /** Warning fires when spending >= 80% of the budget limit. */
-  warning: 80,
   /** Critical fires when spending >= 100% of the budget limit. */
   critical: 100,
+  /** Warning fires when spending >= 80% of the budget limit. */
+  warning: 80,
 } as const;
 
 // ---------------------------------------------------------------------------

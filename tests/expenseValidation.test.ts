@@ -15,11 +15,11 @@ import { describe, it } from "node:test";
 // We import directly from the source (tsx resolves TypeScript).
 // Path aliases (@/) are resolved via tsconfig paths — tsx handles this.
 import {
-  MAX_AMOUNT,
-  MIN_AMOUNT_ABS,
-  MAX_DESCRIPTION_LENGTH,
   assertValidCreateInput,
   assertValidUpdateInput,
+  MAX_AMOUNT,
+  MAX_DESCRIPTION_LENGTH,
+  MIN_AMOUNT_ABS,
   validateAmount,
   validateCreateExpenseInput,
   validateDate,
@@ -232,7 +232,7 @@ describe("validateUpdateExpenseInput", () => {
   });
 
   it("validates amount if provided", () => {
-    const result = validateUpdateExpenseInput({ id: "abc-123", amount: 0 });
+    const result = validateUpdateExpenseInput({ amount: 0, id: "abc-123" });
     assert.equal(result.valid, false);
   });
 
@@ -242,7 +242,7 @@ describe("validateUpdateExpenseInput", () => {
   });
 
   it("validates date if provided", () => {
-    const result = validateUpdateExpenseInput({ id: "abc-123", date: "bad" });
+    const result = validateUpdateExpenseInput({ date: "bad", id: "abc-123" });
     assert.equal(result.valid, false);
   });
 });
@@ -281,7 +281,7 @@ describe("assertValidCreateInput", () => {
 // ---------------------------------------------------------------------------
 describe("assertValidUpdateInput", () => {
   it("does not throw for a valid partial update", () => {
-    assert.doesNotThrow(() => assertValidUpdateInput({ id: "some-uuid", amount: 9.99 }));
+    assert.doesNotThrow(() => assertValidUpdateInput({ amount: 9.99, id: "some-uuid" }));
   });
 
   it("throws TypeError when id is empty", () => {

@@ -49,14 +49,14 @@ export const transformToExpenseWithDetails = (
     const member = DEFAULT_MEMBERS.find((m) => m.id === expense.memberId);
     return {
       ...expense,
-      // Normalise date: Supabase returns "YYYY-MM-DD" string; parse as local time.
-      date: expense.date ? parseLocalDate(expense.date) : new Date(),
+      categoryName: category?.name || null,
       // Normalise timestamps
       createdAt: expense.createdAt ? new Date(expense.createdAt) : new Date(),
-      updatedAt: expense.updatedAt ? new Date(expense.updatedAt) : new Date(),
-      categoryName: category?.name || null,
+      // Normalise date: Supabase returns "YYYY-MM-DD" string; parse as local time.
+      date: expense.date ? parseLocalDate(expense.date) : new Date(),
       memberName: member?.fullName || null,
       tagName: tag?.name || null,
+      updatedAt: expense.updatedAt ? new Date(expense.updatedAt) : new Date(),
     };
   });
 };

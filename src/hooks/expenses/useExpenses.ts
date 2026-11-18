@@ -56,8 +56,6 @@ export const useExpenses = (year: number, month: number) => {
     queryFn: () =>
       isDemo ? fetchDemoExpenses(year, month) : fetchApiExpenses(year, month),
     queryKey: ["expenses", year, month],
-    // Demo data never goes stale; live data re-fetches after 5 min
-    staleTime: isDemo ? Infinity : 5 * 60 * 1000,
     // Retry once on network errors; fail fast on auth errors
     retry: (failureCount, error) => {
       if (error && typeof error === "object" && "code" in error) {
@@ -67,5 +65,7 @@ export const useExpenses = (year: number, month: number) => {
       }
       return failureCount < 1;
     },
+    // Demo data never goes stale; live data re-fetches after 5 min
+    staleTime: isDemo ? Infinity : 5 * 60 * 1000,
   });
 };

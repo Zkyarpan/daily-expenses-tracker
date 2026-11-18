@@ -49,10 +49,20 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/forgot-password") ||
     pathname.startsWith("/auth/callback");
 
+  // Files search engines, link previews and browsers fetch without signing in.
+  const isSeoFile =
+    pathname === "/robots.txt" ||
+    pathname === "/sitemap.xml" ||
+    pathname === "/manifest.webmanifest" ||
+    pathname.startsWith("/opengraph-image") ||
+    pathname.startsWith("/twitter-image") ||
+    pathname.startsWith("/apple-icon");
+
   const isPublicAsset =
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
-    pathname.startsWith("/api/");
+    pathname.startsWith("/api/") ||
+    isSeoFile;
 
   if (isPublicAsset) return supabaseResponse;
 
@@ -83,6 +93,6 @@ export const config = {
      * - _next/image (image optimisation)
      * - favicon.ico, sitemap.xml, robots.txt
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

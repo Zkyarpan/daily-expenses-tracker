@@ -20,7 +20,7 @@
  */
 
 import type { AlertThreshold } from "@/entities/Alert";
-import { computeThreshold } from "@/lib/alertCalculation";
+import { computeThreshold, isOverBudget } from "@/lib/alertCalculation";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -91,7 +91,8 @@ export type CategoryTotal = {
   average: number;
 };
 
-export type BudgetStatus = "under" | AlertThreshold;
+/** Alert levels plus "under" (< 80 %) and "over" (critical and above the limit). */
+export type BudgetStatus = "under" | AlertThreshold | "over";
 
 export type BudgetPerformanceRow = {
   key: string;
@@ -471,10 +472,16 @@ export const groupByCategory = (
 
 /**
  * Budget status — reuses the Feature 5 alert thresholds (80% warning,
- * 100% critical, >100% over) so analytics and alerts always agree.
+ * 100% critical) so analytics and alerts always agree. Analytics keeps its
+ * extra "over" status for a critical budget whose spending exceeds the limit.
  */
-export const budgetStatusFor = (spent: number, limit: number): BudgetStatus =>
-  computeThreshold(spent, limit) ?? "under";
+export const budgetStatusFor = (spent: number, limit: number): BudgetStatus => {
+  const level = computeThreshold(spent, limit);
+  if (level === "critical" && isOverBudget({ limitAmount: limit, spentAmount: spent })) {
+    return "over";
+  }
+  return level ?? "under";
+};
 
 /**
  * Budget-versus-actual per category for the months of `range`.

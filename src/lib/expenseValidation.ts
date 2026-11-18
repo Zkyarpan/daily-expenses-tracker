@@ -125,7 +125,7 @@ export function validateCreateExpenseInput(input: CreateExpenseInput): Validatio
   const descErr = validateDescription(input.description);
   if (descErr) errors.push(descErr);
 
-  return errors.length === 0 ? { valid: true } : { valid: false, errors };
+  return errors.length === 0 ? { valid: true } : { errors, valid: false };
 }
 
 /**
@@ -154,7 +154,7 @@ export function validateUpdateExpenseInput(input: UpdateExpenseInput): Validatio
     if (descErr) errors.push(descErr);
   }
 
-  return errors.length === 0 ? { valid: true } : { valid: false, errors };
+  return errors.length === 0 ? { valid: true } : { errors, valid: false };
 }
 
 /**

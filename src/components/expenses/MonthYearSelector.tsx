@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getMonthLabels, getYearOptions } from "@/lib/dateUtils";
+import { getMonthLabels } from "@/lib/dateUtils";
 
 import YearSelector from "../YearSelector";
 
@@ -27,8 +26,6 @@ const MonthYearSelector = ({
   onMonthYearChange,
 }: MonthYearSelectorProps) => {
   const months = getMonthLabels();
-
-  const years = useMemo(() => getYearOptions(10), []);
 
   const handlePrevious = () => {
     if (currentMonth === 0) {

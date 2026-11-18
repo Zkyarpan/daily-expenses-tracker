@@ -2,6 +2,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { CreateExpenseInput, Expense } from "@/entities/Expense";
+import { invalidateSpendingQueries } from "@/lib/spendingQueries";
 import { getIsDemoMode } from "@/lib/supabase";
 import {
   createExpense,
@@ -13,21 +14,17 @@ import {
 
 const isDemoMode = getIsDemoMode();
 
-export const useExpenseMutations = (year: number, month: number) => {
+// year/month (0-based) are kept for API compatibility with existing callers.
+export const useExpenseMutations = (_year: number, _month: number) => {
   const queryClient = useQueryClient();
-  // month is 0-based here (matches useExpenses convention).
-  // Budgets use 1-based months in their query keys.
-  const queryKey = ["expenses", year, month];
-  const budgetsQueryKey = ["budgets", year, month + 1];
 
-  /** Invalidate both expenses and budgets caches so spending recalculates. */
+  /**
+   * Invalidate every expenses month plus the budgets and yearly caches, so
+   * spending, budgets and alerts recalculate for whichever month the change
+   * landed in (see invalidateSpendingQueries).
+   */
   const invalidateBoth = () => {
-    queryClient.invalidateQueries({ queryKey });
-    queryClient.invalidateQueries({ queryKey: budgetsQueryKey });
-    // Dashboard, Yearly Charts and Analytics read whole-year caches. Every year
-    // is invalidated because an edit can move an expense to a different year.
-    // Only queries currently on screen refetch; the rest refetch on next use.
-    queryClient.invalidateQueries({ queryKey: ["yearly-expenses"] });
+    void invalidateSpendingQueries(queryClient);
   };
 
   // ── CREATE ────────────────────────────────────────────────────────────────
@@ -147,20 +144,15 @@ export const useExpenseMutations = (year: number, month: number) => {
   });
 
   return {
-    // Dialog-based CRUD
-    createFromInput: createFromInputMutation.mutateAsync,
-    updateFromInput: updateMutation.mutateAsync,
-    // Legacy inline-row mutations (spreadsheet mode)
-    create: createMutation.mutate,
-    saveAll: saveAllMutation.mutate,
-    saveAllAsync: saveAllMutation.mutateAsync,
-    delete: deleteMutation.mutateAsync,
     bulkDelete: bulkDeleteMutation.mutate,
     bulkDeleteAsync: bulkDeleteMutation.mutateAsync,
+    // Legacy inline-row mutations (spreadsheet mode)
+    create: createMutation.mutate,
+    // Dialog-based CRUD
+    createFromInput: createFromInputMutation.mutateAsync,
+    delete: deleteMutation.mutateAsync,
     // Loading states
     isCreating: createFromInputMutation.isPending || createMutation.isPending,
-    isUpdating: updateMutation.isPending,
-    isSaving: saveAllMutation.isPending,
     isDeleting: bulkDeleteMutation.isPending || deleteMutation.isPending,
     isPending:
       createMutation.isPending ||
@@ -168,5 +160,10 @@ export const useExpenseMutations = (year: number, month: number) => {
       updateMutation.isPending ||
       saveAllMutation.isPending ||
       deleteMutation.isPending,
+    isSaving: saveAllMutation.isPending,
+    isUpdating: updateMutation.isPending,
+    saveAll: saveAllMutation.mutate,
+    saveAllAsync: saveAllMutation.mutateAsync,
+    updateFromInput: updateMutation.mutateAsync,
   };
 };

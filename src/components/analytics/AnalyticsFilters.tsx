@@ -69,46 +69,47 @@ const CustomRangeInputs = ({
     if (!validateCustomRange(next.start, next.end)) onChange(next.start, next.end);
   };
 
+  const describedBy = error ? `${id}-error` : `${id}-hint`;
+
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex flex-wrap items-end gap-2">
-        <div className="grid gap-1">
-          <Label htmlFor={`${id}-start`} className="text-muted-foreground text-xs">
-            From
-          </Label>
-          <Input
-            id={`${id}-start`}
-            type="date"
-            className="h-8 w-38"
-            value={draft.start}
-            max={draft.end || undefined}
-            aria-invalid={!!error}
-            aria-describedby={error ? `${id}-error` : undefined}
-            onChange={(e) => update({ ...draft, start: e.target.value })}
-          />
-        </div>
-        <div className="grid gap-1">
-          <Label htmlFor={`${id}-end`} className="text-muted-foreground text-xs">
-            To
-          </Label>
-          <Input
-            id={`${id}-end`}
-            type="date"
-            className="h-8 w-38"
-            value={draft.end}
-            min={draft.start || undefined}
-            aria-invalid={!!error}
-            aria-describedby={error ? `${id}-error` : undefined}
-            onChange={(e) => update({ ...draft, end: e.target.value })}
-          />
-        </div>
+    <div className="flex flex-col gap-1.5">
+      <div className="flex flex-wrap items-center gap-2">
+        <Label htmlFor={`${id}-start`} className="text-muted-foreground text-xs font-normal">
+          From
+        </Label>
+        <Input
+          id={`${id}-start`}
+          type="date"
+          className="h-8 w-38"
+          value={draft.start}
+          max={draft.end || undefined}
+          aria-invalid={!!error}
+          aria-describedby={describedBy}
+          onChange={(e) => update({ ...draft, start: e.target.value })}
+        />
+        <Label htmlFor={`${id}-end`} className="text-muted-foreground text-xs font-normal">
+          to
+        </Label>
+        <Input
+          id={`${id}-end`}
+          type="date"
+          className="h-8 w-38"
+          value={draft.end}
+          min={draft.start || undefined}
+          aria-invalid={!!error}
+          aria-describedby={describedBy}
+          onChange={(e) => update({ ...draft, end: e.target.value })}
+        />
+        {!error && (
+          <span id={`${id}-hint`} className="text-muted-foreground text-xs">
+            Max {MAX_CUSTOM_RANGE_MONTHS} months
+          </span>
+        )}
       </div>
-      {error ? (
+      {error && (
         <p id={`${id}-error`} role="alert" className="text-destructive text-xs">
           {error}
         </p>
-      ) : (
-        <p className="text-muted-foreground text-xs">Up to {MAX_CUSTOM_RANGE_MONTHS} months.</p>
       )}
     </div>
   );
@@ -137,24 +138,21 @@ const AnalyticsFilters = ({
   return (
     <section
       aria-label="Analytics filters"
-      className="bg-secondary flex flex-col gap-4 rounded-lg p-4 lg:flex-row lg:items-end lg:justify-between print:hidden"
+      className="bg-card flex flex-col gap-3 rounded-2xl p-3 shadow-sm sm:px-4 lg:flex-row lg:items-center lg:justify-between print:hidden"
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-        <div className="grid gap-1">
-          <span className="text-muted-foreground text-xs" id="period-type-label">
-            Period
-          </span>
-          <Tabs
-            value={selection.kind}
-            onValueChange={(v) => onSelectionChange(switchKind(selection, v as PeriodSelection["kind"]))}
-          >
-            <TabsList aria-labelledby="period-type-label" className="h-8">
-              <TabsTrigger value="month" className="text-xs">Month</TabsTrigger>
-              <TabsTrigger value="year" className="text-xs">Year</TabsTrigger>
-              <TabsTrigger value="custom" className="text-xs">Custom range</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <Tabs
+          value={selection.kind}
+          onValueChange={(v) => onSelectionChange(switchKind(selection, v as PeriodSelection["kind"]))}
+        >
+          <TabsList aria-label="Period type" className="group-data-[orientation=horizontal]/tabs:h-8">
+            <TabsTrigger value="month" className="px-3 text-xs">Month</TabsTrigger>
+            <TabsTrigger value="year" className="px-3 text-xs">Year</TabsTrigger>
+            <TabsTrigger value="custom" className="px-3 text-xs">Custom</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        <span className="bg-border hidden h-5 w-px sm:block" aria-hidden />
 
         {selection.kind === "month" && (
           <MonthYearSelector
@@ -181,17 +179,17 @@ const AnalyticsFilters = ({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
+        {!isDefault && (
+          <Button variant="ghost" size="sm" className="text-muted-foreground gap-1.5" onClick={onReset}>
+            <RotateCcw className="size-3.5" aria-hidden />
+            Reset
+          </Button>
+        )}
         <CategoryFilter
           categories={CATEGORY_NAMES}
           selectedCategories={selectedNames}
           onSelectionChange={handleCategoryChange}
         />
-        {!isDefault && (
-          <Button variant="ghost" size="sm" className="gap-1.5" onClick={onReset}>
-            <RotateCcw className="size-3.5" />
-            Reset
-          </Button>
-        )}
       </div>
     </section>
   );

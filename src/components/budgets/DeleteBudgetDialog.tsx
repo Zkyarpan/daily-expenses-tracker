@@ -7,11 +7,8 @@
  */
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 
-import type { BudgetWithSpending } from "@/entities/Budget";
-import { formatCurrency } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -21,6 +18,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import type { BudgetWithSpending } from "@/entities/Budget";
+import { formatCurrency } from "@/lib/utils";
 
 interface DeleteBudgetDialogProps {
   open: boolean;
@@ -56,7 +56,7 @@ export function DeleteBudgetDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+      <AlertDialogContent icon={<Trash2 aria-hidden />}>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete budget?</AlertDialogTitle>
           <AlertDialogDescription>

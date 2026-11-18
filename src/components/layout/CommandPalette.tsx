@@ -1,15 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  BarChart2,
-  CreditCard,
-  LayoutDashboard,
-  LineChart,
-  ReceiptText,
-  Upload,
-} from "lucide-react";
+import { Desktop, Moon, Sun } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 
 import { startRouteProgress } from "@/components/layout/RouteProgress";
 import {
@@ -19,20 +13,22 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandSeparator,
 } from "@/components/ui/command";
 
-const NAV_ITEMS = [
-  { href: "/", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/expenses", icon: ReceiptText, label: "Expenses" },
-  { href: "/analytics", icon: LineChart, label: "Analytics & Reports" },
-  { href: "/yearly-charts", icon: BarChart2, label: "Yearly Charts" },
-  { href: "/import-expenses", icon: Upload, label: "Import Expenses" },
-  { href: "/trackers", icon: CreditCard, label: "Misc Trackers" },
-];
+import { ACCOUNT_GROUP, NAV_GROUPS } from "./navigation";
 
+const THEMES = [
+  { icon: Sun, label: "Light", value: "light" },
+  { icon: Moon, label: "Dark", value: "dark" },
+  { icon: Desktop, label: "System", value: "system" },
+] as const;
+
+/** Global ⌘K palette. Pages come from `NAV_GROUPS` in ./navigation. */
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const { setTheme } = useTheme();
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -53,14 +49,33 @@ export function CommandPalette() {
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
-      <CommandInput placeholder="Go to..." />
+      <CommandInput placeholder="Search pages or actions…" />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
-        <CommandGroup heading="Navigation">
-          {NAV_ITEMS.map(({ href, icon: Icon, label }) => (
-            <CommandItem key={href} onSelect={() => handleSelect(href)}>
-              <Icon className="mr-2 h-4 w-4" />
-              {label}
+        {[...NAV_GROUPS, ACCOUNT_GROUP].map((group) => (
+          <CommandGroup key={group.label} heading={group.label === "Overview" ? "Pages" : group.label}>
+            {group.items.map(({ hint, icon: Icon, title, url }) => (
+              <CommandItem key={url} value={`${title} ${hint}`} onSelect={() => handleSelect(url)}>
+                <Icon className="size-4" aria-hidden />
+                <span>{title}</span>
+                <span className="text-muted-foreground ml-auto truncate text-xs">{hint}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        ))}
+        <CommandSeparator />
+        <CommandGroup heading="Theme">
+          {THEMES.map(({ icon: Icon, label, value }) => (
+            <CommandItem
+              key={value}
+              value={`${label} theme`}
+              onSelect={() => {
+                setTheme(value);
+                setOpen(false);
+              }}
+            >
+              <Icon className="size-4" aria-hidden />
+              {label} theme
             </CommandItem>
           ))}
         </CommandGroup>

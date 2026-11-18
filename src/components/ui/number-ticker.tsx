@@ -12,6 +12,7 @@
  */
 
 import { type ComponentPropsWithoutRef, useEffect, useRef } from "react"
+
 import { cn } from "@/lib/utils"
 
 interface NumberTickerProps extends ComponentPropsWithoutRef<"span"> {

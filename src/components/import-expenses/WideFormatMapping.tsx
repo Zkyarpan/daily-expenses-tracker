@@ -31,7 +31,7 @@ export function WideFormatMappingComponent() {
     isWideFormatMapping,
   } = useCSVImport();
 
-  const isRequired = (field: string) => {
+  const isRequired = (_field: string) => {
     return false;
   };
 

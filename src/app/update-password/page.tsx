@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 import {
   AUTH_LABEL_CLASS,
@@ -14,6 +15,7 @@ import {
 } from "@/components/auth/AuthShell";
 import { startRouteProgress } from "@/components/layout/RouteProgress";
 import { Label } from "@/components/ui/label";
+import { friendlyAuthError } from "@/lib/authMessages";
 import { createClient } from "@/utils/supabase/client";
 
 export default function UpdatePasswordPage() {
@@ -41,7 +43,7 @@ export default function UpdatePasswordPage() {
 
     const supabase = createClient();
     if (!supabase) {
-      setError("Authentication is not configured.");
+      toast.error("This isn’t available", { description: "Authentication is not configured on this server." });
       setLoading(false);
       return;
     }
@@ -49,11 +51,13 @@ export default function UpdatePasswordPage() {
     const { error: authError } = await supabase.auth.updateUser({ password });
 
     if (authError) {
-      setError(authError.message);
+      const { description, title } = friendlyAuthError("update-password", authError.message);
+      toast.error(title, { description });
       setLoading(false);
       return;
     }
 
+    toast.success("Password updated", { description: "You’re signed in with your new password." });
     startRouteProgress();
     router.push("/");
     router.refresh();

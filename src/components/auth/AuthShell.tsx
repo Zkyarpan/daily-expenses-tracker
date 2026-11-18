@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Check, CircleNotch, Eye, EyeSlash, Wallet } from "@phosphor-icons/react";
+import { Check, CircleNotch, Eye, EyeSlash } from "@phosphor-icons/react";
 
+import { LogoMark } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -33,61 +34,57 @@ interface AuthShellProps {
 
 export function AuthShell({ children, features, heroText, heroTitle }: AuthShellProps) {
   return (
-    <div className="bg-background flex min-h-svh">
-      {/* Left — brand panel */}
-      <div className="bg-card border-border relative hidden w-[48%] flex-col justify-between overflow-hidden border-r p-12 lg:flex">
-        {/* Subtle grid pattern */}
+    <div className="bg-background app-backdrop flex min-h-svh">
+      {/* Left — brand panel: solid indigo with a soft glow and dot grid */}
+      <div className="relative hidden w-[46%] flex-col justify-between overflow-hidden bg-[linear-gradient(150deg,#6d5df8_0%,#4b3be0_45%,#2a1d9e_100%)] p-12 text-white lg:flex">
         <div
-          className="pointer-events-none absolute inset-0 opacity-[0.03]"
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.14]"
           style={{
-            backgroundImage: `linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)`,
-            backgroundSize: "32px 32px",
+            backgroundImage: "radial-gradient(rgba(255,255,255,0.9) 1px, transparent 1px)",
+            backgroundSize: "22px 22px",
           }}
         />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-40 -right-32 size-[30rem] rounded-full bg-[#c8f542]/20 blur-3xl"
+        />
 
-        {/* Logo */}
-        <div className="relative z-10 flex items-center gap-3">
-          <span className="bg-foreground flex size-10 items-center justify-center rounded-xl shadow-sm">
-            <Wallet size={20} weight="duotone" className="text-background" />
-          </span>
-          <span className="text-base font-bold tracking-tight">Daily Expenses</span>
+        {/* Logo only */}
+        <div className="relative z-10">
+          <LogoMark className="size-14 drop-shadow-[0_10px_24px_rgba(0,0,0,0.35)]" title="Daily Expenses" />
         </div>
 
         {/* Hero text */}
         <div className="relative z-10 space-y-8">
           <div className="space-y-4">
-            <h2 className="text-4xl leading-tight font-bold" style={{ letterSpacing: "-0.035em" }}>
+            <h2 className="text-4xl leading-tight font-bold text-white" style={{ letterSpacing: "-0.035em" }}>
               {heroTitle}
             </h2>
-            <p className="text-muted-foreground text-base leading-relaxed">{heroText}</p>
+            <p className="text-base leading-relaxed text-white/75">{heroText}</p>
           </div>
 
           <ul className="space-y-3.5">
             {features.map((feature) => (
               <li key={feature} className="flex items-center gap-3">
-                <span className="bg-foreground/10 flex size-6 shrink-0 items-center justify-center rounded-full">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#c8f542] text-[#24301a]">
                   <Check size={12} weight="bold" aria-hidden />
                 </span>
-                <span className="text-muted-foreground text-sm font-medium">{feature}</span>
+                <span className="text-sm font-medium text-white/85">{feature}</span>
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="text-muted-foreground/50 relative z-10 text-xs font-medium">
-          © {new Date().getFullYear()} Daily Expenses Tracker
-        </div>
+        <p className="relative z-10 text-xs font-medium text-white/55">© {new Date().getFullYear()}</p>
       </div>
 
       {/* Right — form panel */}
-      <div className="bg-background flex flex-1 flex-col items-center justify-center px-6 py-12">
+      <div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm">
-          {/* Mobile logo */}
-          <div className="mb-10 flex flex-col items-center gap-3 lg:hidden">
-            <span className="bg-foreground flex size-14 items-center justify-center rounded-3xl shadow-lg">
-              <Wallet size={28} weight="duotone" className="text-background" />
-            </span>
-            <span className="text-lg font-bold tracking-tight">Daily Expenses</span>
+          {/* Mobile: logo only */}
+          <div className="mb-10 flex justify-center lg:hidden">
+            <LogoMark className="size-16 drop-shadow-lg" title="Daily Expenses" />
           </div>
 
           {children}

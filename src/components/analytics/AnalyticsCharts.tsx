@@ -20,8 +20,8 @@ type AnalyticsChartsProps = {
 };
 
 const AnalyticsCharts = ({ budgetsStatus, data }: AnalyticsChartsProps) => (
-  <section aria-label="Spending charts" className="space-y-6">
-    <div className="grid gap-6 lg:grid-cols-3">
+  <section aria-label="Spending charts" className="space-y-4">
+    <div className="grid gap-4 lg:grid-cols-3">
       <SpendingTrendChart
         monthly={data.monthly}
         daily={data.daily}
@@ -29,7 +29,7 @@ const AnalyticsCharts = ({ budgetsStatus, data }: AnalyticsChartsProps) => (
       />
       <CategoryDonutChart categories={data.categories} />
     </div>
-    <div className="grid gap-6 lg:grid-cols-2">
+    <div className="grid gap-4 lg:grid-cols-2">
       <BudgetVsActualChart summary={data.budgets} status={budgetsStatus} />
       <YearComparisonChart data={data.yearComparison} year={data.comparisonYear} />
     </div>

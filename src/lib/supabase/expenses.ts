@@ -71,15 +71,15 @@ export async function createExpense(
   const { data, error } = await supabase
     .from("expenses")
     .insert({
+      amount: expense.amount,
       "categoryId": expense.categoryId,
       "createdAt": new Date().toISOString(),
-      "memberId": expense.memberId,
-      "tagId": expense.tagId,
-      "updatedAt": new Date().toISOString(),
-      amount: expense.amount,
       date: dateStr,
       description: expense.description,
       id: expense.id,
+      "memberId": expense.memberId,
+      "tagId": expense.tagId,
+      "updatedAt": new Date().toISOString(),
       user_id: userId,
     })
     .select()
@@ -108,15 +108,15 @@ export async function saveAll(expenses: Expense[]) {
 
   const expensesToSave = expenses.map(
     ({ id, amount, memberId, categoryId, tagId, date, description, createdAt }) => ({
+      amount,
       "categoryId": categoryId,
       "createdAt": createdAt,
-      "memberId": memberId,
-      "tagId": tagId,
-      "updatedAt": new Date().toISOString(),
-      amount,
       date,
       description,
       id,
+      "memberId": memberId,
+      "tagId": tagId,
+      "updatedAt": new Date().toISOString(),
       user_id: userId,
     }),
   );

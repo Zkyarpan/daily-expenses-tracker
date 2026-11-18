@@ -15,6 +15,11 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
+  // Generated files (build output and Next's type stub), as in the standard
+  // create-next-app config. Source code is still linted in full.
+  {
+    ignores: [".next/**", "out/**", "build/**", "next-env.d.ts"],
+  },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     files: ["**/*.{js,jsx,ts,tsx}"],

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AlertCircle, PiggyBank, Plus, TrendingDown } from "lucide-react";
 import { toast } from "sonner";
 
@@ -14,11 +14,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Budget, BudgetWithSpending } from "@/entities/Budget";
-import { useSpendingAlerts } from "@/hooks/alerts/useSpendingAlerts";
+import { useMonthAlertSync } from "@/hooks/alerts/useSpendingAlerts";
 import { useBudgetMutations } from "@/hooks/budgets/useBudgetMutations";
 import { useBudgets } from "@/hooks/budgets/useBudgets";
-import { useExpenses } from "@/hooks/expenses/useExpenses";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { DEFAULT_CATEGORIES } from "@/lib/config";
 import { supabase } from "@/lib/supabase";
 import { formatCurrency, getErrorMessage } from "@/lib/utils";
 
@@ -68,22 +67,21 @@ export default function BudgetsPage() {
     data: budgets = [],
     isLoading,
     isError,
+    isSuccess,
     isTableMissing,
     error,
   } = useBudgets(year, month1);
 
-  useExpenses(year, month0);
-
   const { create, update, remove } = useBudgetMutations(year, month1);
 
-  const currentUser = useCurrentUser();
-  const { currentMonthAlerts } = useSpendingAlerts(
-    currentUser?.id,
-    year,
-    month1,
-    budgets,
+  // The provider already keeps the current month in sync; this covers the
+  // month selected here (a no-op write when it is the current month).
+  const { alerts, dismiss: dismissAlert, syncUserId } = useAlerts();
+  useMonthAlertSync(syncUserId, year, month1, budgets, isSuccess);
+  const currentMonthAlerts = useMemo(
+    () => alerts.filter((a) => a.year === year && a.month === month1),
+    [alerts, year, month1],
   );
-  const { dismiss: dismissAlert } = useAlerts();
 
   const [formDialogOpen, setFormDialogOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | undefined>();
@@ -114,7 +112,9 @@ export default function BudgetsPage() {
     if (editingBudget) {
       await update.mutateAsync({ id: editingBudget.id, limitAmount: data.limitAmount });
       toast.success("Budget updated", {
-        description: `${data.categoryId} limit set to ${formatCurrency(data.limitAmount)}`,
+        description: `${
+          DEFAULT_CATEGORIES.find((c) => c.id === data.categoryId)?.name ?? data.categoryId
+        } limit set to ${formatCurrency(data.limitAmount)}`,
       });
     } else {
       await create.mutateAsync({

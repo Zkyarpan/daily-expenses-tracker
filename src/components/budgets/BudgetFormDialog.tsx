@@ -7,17 +7,9 @@
  * Validates on the client before submitting; surfaces server errors inline.
  */
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Loader2 } from "lucide-react";
 
-import type { Budget } from "@/entities/Budget";
-import {
-  isDuplicateBudget,
-  validateBudgetLimit,
-  validateCategoryId,
-} from "@/lib/budgetValidation";
-import { DEFAULT_CATEGORIES } from "@/lib/config";
-import { getErrorMessage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -36,6 +28,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { Budget } from "@/entities/Budget";
+import {
+  isDuplicateBudget,
+  validateBudgetLimit,
+  validateCategoryId,
+} from "@/lib/budgetValidation";
+import { DEFAULT_CATEGORIES } from "@/lib/config";
+import { getErrorMessage } from "@/lib/utils";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -85,8 +85,22 @@ export function BudgetFormDialog({
   const [serverError, setServerError] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Reset when dialog opens / closes or the budget prop changes
-  useEffect(() => {
+  // Reset when the dialog opens, or the budget / current month changes while
+  // it is open (same triggers as before, applied during render).
+  const [synced, setSynced] = useState<{
+    budget: typeof budget;
+    currentMonth: number;
+    currentYear: number;
+    open: boolean;
+  } | null>(null);
+  if (
+    !synced ||
+    synced.open !== open ||
+    synced.budget !== budget ||
+    synced.currentMonth !== currentMonth ||
+    synced.currentYear !== currentYear
+  ) {
+    setSynced({ budget, currentMonth, currentYear, open });
     if (open) {
       setCategoryId(budget?.categoryId ?? "");
       setLimitStr(budget ? String(budget.limitAmount) : "");
@@ -95,7 +109,7 @@ export function BudgetFormDialog({
       setErrors({});
       setServerError("");
     }
-  }, [open, budget, currentMonth, currentYear]);
+  }
 
   // ── Validation ──────────────────────────────────────────────────────────
   function validate(): boolean {

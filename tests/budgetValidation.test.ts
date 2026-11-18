@@ -206,7 +206,7 @@ describe("validateCreateBudgetInput", () => {
   });
 
   it("accumulates multiple errors", () => {
-    const r = validateCreateBudgetInput({ ...validInput, limitAmount: -1, categoryId: "" });
+    const r = validateCreateBudgetInput({ ...validInput, categoryId: "", limitAmount: -1 });
     assert.equal(r.valid, false);
     if (!r.valid) assert.ok(r.errors.length >= 2);
   });

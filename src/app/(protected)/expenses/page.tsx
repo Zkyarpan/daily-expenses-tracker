@@ -49,12 +49,16 @@ const ExpensesPage = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [goToLastPage, setGoToLastPage] = useState(false);
 
-  useEffect(() => {
+  // Reload the editable copy when the month changes or rows are added/removed
+  // on the server (same triggers as before: row count, month, year).
+  const syncKey = `${fetchedData.length}|${currentMonth}|${currentYear}`;
+  const [syncedKey, setSyncedKey] = useState<string | null>(null);
+  if (syncedKey !== syncKey) {
+    setSyncedKey(syncKey);
     setLocalExpenses(fetchedData);
     setHasUnsavedChanges(false);
     setGoToLastPage(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchedData.length, currentMonth, currentYear]);
+  }
 
   // ── Dialog state ───────────────────────────────────────────────────────────
   const [formDialogOpen, setFormDialogOpen] = useState(false);

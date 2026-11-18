@@ -59,9 +59,12 @@ const EditableAmountCell = ({
 }) => {
   const [value, setValue] = useState(expense.amount.toFixed(2));
 
-  useEffect(() => {
+  // Show the new amount when it changes outside this cell (refetch, undo…).
+  const [syncedAmount, setSyncedAmount] = useState(expense.amount);
+  if (syncedAmount !== expense.amount) {
+    setSyncedAmount(expense.amount);
     setValue(expense.amount.toFixed(2));
-  }, [expense.amount]);
+  }
 
   const handleBlur = () => {
     const numValue = parseFloat(value);
@@ -118,9 +121,12 @@ const EditableDescriptionCell = ({
 }) => {
   const [value, setValue] = useState(expense.description || "");
 
-  useEffect(() => {
+  // Show the new text when it changes outside this cell (refetch, undo…).
+  const [syncedDescription, setSyncedDescription] = useState(expense.description);
+  if (syncedDescription !== expense.description) {
+    setSyncedDescription(expense.description);
     setValue(expense.description || "");
-  }, [expense.description]);
+  }
 
   const handleBlur = () => {
     if (value !== expense.description) {

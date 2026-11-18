@@ -24,7 +24,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { SpendingAlert } from "@/entities/Alert";
-import { getAlertDescription } from "@/lib/alertCalculation";
+import { getAlertDescription, isOverBudget } from "@/lib/alertCalculation";
 import { cn, formatCurrency } from "@/lib/utils";
 
 const MONTH_NAMES = [
@@ -34,11 +34,12 @@ const MONTH_NAMES = [
 
 const formatMonth = (year: number, month: number) => `${MONTH_NAMES[month - 1]} ${year}`;
 
-const STATUS_LABEL: Record<SpendingAlert["threshold"], string> = {
-  critical: "Limit reached",
-  over: "Over budget",
-  warning: "Nearly there",
-};
+const statusLabel = (alert: SpendingAlert) =>
+  alert.threshold === "warning"
+    ? "Nearly there"
+    : isOverBudget(alert)
+      ? "Over budget"
+      : "Limit reached";
 
 // ---------------------------------------------------------------------------
 // Single alert row
@@ -50,7 +51,7 @@ interface AlertRowProps {
 }
 
 function AlertRow({ alert, onMarkRead, onDismiss }: AlertRowProps) {
-  const isCritical = alert.threshold === "critical" || alert.threshold === "over";
+  const isCritical = alert.threshold === "critical";
   const Icon = isCritical ? CircleAlert : TriangleAlert;
 
   return (
@@ -76,7 +77,7 @@ function AlertRow({ alert, onMarkRead, onDismiss }: AlertRowProps) {
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <p className="text-sm font-semibold">{alert.categoryName}</p>
               <StatusBadge tone={isCritical ? "critical" : "warning"}>
-                {STATUS_LABEL[alert.threshold]}
+                {statusLabel(alert)}
               </StatusBadge>
             </div>
             <p className="text-muted-foreground mt-0.5 text-xs">

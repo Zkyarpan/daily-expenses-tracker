@@ -8,7 +8,9 @@
  */
 
 import type {
+  Budget,
   BudgetValidationResult,
+  BudgetWithSpending,
   CreateBudgetInput,
   UpdateBudgetInput,
 } from "@/entities/Budget";
@@ -109,7 +111,7 @@ export function validateCreateBudgetInput(
   const catErr = validateCategoryId(input.categoryId);
   if (catErr) errors.push(catErr);
 
-  return errors.length === 0 ? { valid: true } : { valid: false, errors };
+  return errors.length === 0 ? { valid: true } : { errors, valid: false };
 }
 
 /**
@@ -130,7 +132,7 @@ export function validateUpdateBudgetInput(
     if (limitErr) errors.push(limitErr);
   }
 
-  return errors.length === 0 ? { valid: true } : { valid: false, errors };
+  return errors.length === 0 ? { valid: true } : { errors, valid: false };
 }
 
 /**
@@ -181,6 +183,25 @@ export function isDuplicateBudget(
 // ---------------------------------------------------------------------------
 
 /**
+ * Canonical form of a category ID for comparisons. Budgets and expenses both
+ * store the text ID from DEFAULT_CATEGORIES ("1" = Grocery), never the display
+ * name. Normalising guards against a numeric 1 or stray whitespace (" 1")
+ * from an import or a column-type change silently dropping spending from a
+ * budget. Display names are NOT mapped: "Grocery" does not match "1".
+ */
+export function normaliseCategoryId(id: unknown): string | null {
+  if (id === null || id === undefined) return null;
+  const value = String(id).trim();
+  return value === "" ? null : value;
+}
+
+/** True when both values are the same (non-empty) category ID. */
+export function sameCategoryId(a: unknown, b: unknown): boolean {
+  const left = normaliseCategoryId(a);
+  return left !== null && left === normaliseCategoryId(b);
+}
+
+/**
  * Calculates the total amount spent in a given category/month/year from a
  * flat array of expenses.
  *
@@ -188,14 +209,14 @@ export function isDuplicateBudget(
  * Negative amounts (refunds) reduce the spending total.
  */
 export function calculateCategorySpending(
-  expenses: Array<{ amount: number; categoryId: string | null; date: Date | string }>,
+  expenses: Array<{ amount: number; categoryId: string | number | null; date: Date | string }>,
   categoryId: string,
   year: number,
   month: number, // 1-based
 ): number {
   return expenses
     .filter((e) => {
-      if (e.categoryId !== categoryId) return false;
+      if (!sameCategoryId(e.categoryId, categoryId)) return false;
       // Normalise date
       const d = e.date instanceof Date ? e.date : new Date(e.date);
       return d.getFullYear() === year && d.getMonth() + 1 === month;
@@ -209,4 +230,34 @@ export function calculateCategorySpending(
 export function clampProgressPercent(spent: number, limit: number): number {
   if (limit <= 0) return 0;
   return Math.min(100, Math.max(0, (spent / limit) * 100));
+}
+
+/**
+ * Joins one month's budget rows with that month's expenses (the calculation
+ * useBudgets has always done, moved here so it can be unit-tested).
+ *
+ * @param categoryNames category ID → display name (DEFAULT_CATEGORIES); the
+ *   name is for display only, matching is always by ID.
+ */
+export function computeBudgetsWithSpending(
+  budgets: Budget[],
+  expenses: Array<{ amount: number; categoryId: string | number | null; date: Date | string }>,
+  year: number,
+  month: number, // 1-based
+  categoryNames: ReadonlyMap<string, string>,
+): BudgetWithSpending[] {
+  return budgets.map((budget) => {
+    const spent = calculateCategorySpending(expenses, budget.categoryId, year, month);
+    const remaining = budget.limitAmount - spent;
+    const progressPercent = clampProgressPercent(spent, budget.limitAmount);
+    const id = normaliseCategoryId(budget.categoryId);
+
+    return {
+      ...budget,
+      categoryName: (id !== null && categoryNames.get(id)) || budget.categoryId,
+      progressPercent,
+      remaining,
+      spent,
+    };
+  });
 }

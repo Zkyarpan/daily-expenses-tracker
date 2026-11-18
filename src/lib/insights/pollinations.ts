@@ -35,9 +35,17 @@ export type PollinationsResult =
       message: string;
     };
 
+/** Text messages, or messages with image parts (OpenAI vision format) for receipt reading. */
+export type PollinationsMessage =
+  | ChatMessage
+  | {
+      content: Array<{ text: string; type: "text" } | { image_url: { url: string }; type: "image_url" }> | string;
+      role: "system" | "user";
+    };
+
 export type CallOptions = {
   apiKey: string | undefined;
-  messages: ChatMessage[];
+  messages: readonly PollinationsMessage[];
   model?: string;
   timeoutMs?: number;
   /** Upper bound on the answer length. Defaults to 1500 (enough for insights). */

@@ -12,10 +12,6 @@ const nextConfig: NextConfig = {
   // sidebar's account details and sign-out button.
   devIndicators: { position: "bottom-right" },
 
-  // Load the PDF reader with Node's own require on the server instead of
-  // bundling it: pdf.js ships a worker file that bundlers can't relocate.
-  serverExternalPackages: ["pdf-parse", "pdfjs-dist"],
-
   // ── Experimental optimisations ────────────────────────────────────────────
   experimental: {
     // Tree-shake large icon/component libraries — import only used symbols.
@@ -29,6 +25,10 @@ const nextConfig: NextConfig = {
     ],
   },
 
+  // Load the PDF reader with Node's own require on the server instead of
+  // bundling it: pdf.js ships a worker file that bundlers can't relocate.
+  serverExternalPackages: ["pdf-parse", "pdfjs-dist"],
+
   // ── Webpack config (production build and webpack dev mode only) ───────────
   // Omitted when --turbopack is active to prevent testMode activation.
   ...(!isTurbopack && {
@@ -38,10 +38,10 @@ const nextConfig: NextConfig = {
       // Polyfill Node.js built-ins that ExcelJS references
       (config as { resolve: { fallback?: Record<string, boolean> } }).resolve.fallback = {
         ...(config as { resolve: { fallback?: Record<string, boolean> } }).resolve.fallback,
-        fs: false,
-        stream: false,
-        path: false,
         crypto: false,
+        fs: false,
+        path: false,
+        stream: false,
       };
 
       if (!isServer) {

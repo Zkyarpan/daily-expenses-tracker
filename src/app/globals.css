@@ -4,21 +4,20 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * ─── Design system tokens — shadcn zinc-950 dark ────────────────────────────
+ * ─── Design system tokens — "Indigo & Lime" ────────────────────────────────
  *
- * Exactly the colour palette from ui.shadcn.com (dark zinc theme).
- *
- * Background  #09090b  zinc-950
- * Card        #18181b  zinc-900
- * Border      #27272a  zinc-800
- * Muted       #27272a  zinc-800
- * Foreground  #fafafa  zinc-50
- * Primary     #fafafa  zinc-50  (white)
+ * Brand: indigo-violet (primary, solid buttons, focus) with a small lime
+ * highlight (the logo's spark). Light mode sits on a faint lavender-white;
+ * dark mode on deep navy. Cards are solid with a hairline edge (built into
+ * the shadow tokens), so every panel reads crisply on both themes.
  */
 
 @theme inline {
   --font-sans: var(--font-inter);
   --font-mono: var(--font-mono);
+  --font-display: var(--font-jakarta), var(--font-inter);
+  --color-highlight: var(--highlight);
+  --color-highlight-foreground: var(--highlight-foreground);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -61,15 +60,16 @@
 }
 
 @theme {
-  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.5);
-  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.6), 0 1px 2px -1px rgb(0 0 0 / 0.5);
-  --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.7), 0 2px 4px -2px rgb(0 0 0 / 0.5);
-  --shadow-lg: 0 10px 24px -4px rgb(0 0 0 / 0.8), 0 4px 8px -4px rgb(0 0 0 / 0.5);
-  --shadow-xl: 0 20px 40px -8px rgb(0 0 0 / 0.8), 0 8px 16px -8px rgb(0 0 0 / 0.5);
-  --shadow-2xl: 0 32px 64px -12px rgb(0 0 0 / 0.9);
+  /* Light defaults. md and up include a 1px hairline so cards look solid. */
+  --shadow-xs: 0 1px 2px 0 rgb(20 18 60 / 0.05);
+  --shadow-sm: 0 1px 2px 0 rgb(20 18 60 / 0.06), 0 1px 3px 0 rgb(20 18 60 / 0.05);
+  --shadow-md: 0 0 0 1px rgb(20 18 60 / 0.07), 0 2px 4px -1px rgb(20 18 60 / 0.05), 0 10px 24px -8px rgb(20 18 60 / 0.10);
+  --shadow-lg: 0 0 0 1px rgb(20 18 60 / 0.07), 0 16px 36px -10px rgb(20 18 60 / 0.18);
+  --shadow-xl: 0 0 0 1px rgb(20 18 60 / 0.07), 0 24px 48px -12px rgb(20 18 60 / 0.22);
+  --shadow-2xl: 0 0 0 1px rgb(20 18 60 / 0.07), 0 32px 64px -16px rgb(20 18 60 / 0.28);
 }
 
-/* ── Light mode (keeps app usable if user switches) ── */
+/* ── Light mode ── */
 :root {
   color-scheme: light;
 
@@ -79,35 +79,40 @@
 
   --radius: 0.75rem;
 
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.141 0.005 285.823);
+  --background: oklch(0.982 0.006 285);
+  --foreground: oklch(0.2 0.035 280);
 
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.141 0.005 285.823);
+  --card-foreground: oklch(0.2 0.035 280);
 
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
+  --popover-foreground: oklch(0.2 0.035 280);
 
-  --primary: oklch(0.21 0.006 285.885);
-  --primary-foreground: oklch(0.985 0 0);
+  /* Indigo-violet brand — solid buttons with white text (6.9:1). */
+  --primary: oklch(0.515 0.235 279);
+  --primary-foreground: oklch(0.99 0 0);
 
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
+  --secondary: oklch(0.955 0.014 285);
+  --secondary-foreground: oklch(0.28 0.06 280);
 
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
+  --muted: oklch(0.962 0.01 285);
+  --muted-foreground: oklch(0.5 0.035 282);
 
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
+  --accent: oklch(0.95 0.025 285);
+  --accent-foreground: oklch(0.32 0.12 280);
+
+  /* Lime spark from the logo — tiny highlights only. */
+  --highlight: oklch(0.9 0.2 125);
+  --highlight-foreground: oklch(0.25 0.06 130);
 
   --destructive: oklch(0.577 0.245 27.325);
 
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.21 0.006 285.885);
+  --border: oklch(0.915 0.012 285);
+  --input: oklch(0.89 0.014 285);
+  --ring: oklch(0.515 0.235 279);
 
   --success: oklch(0.52 0.165 155);
-  --warning: oklch(0.60 0.185 65);
+  --warning: oklch(0.6 0.185 65);
   --info: oklch(0.52 0.19 240);
 
   --chart-1: oklch(0.646 0.222 41.116);
@@ -116,61 +121,56 @@
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
 
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.21 0.006 285.885);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.21 0.006 285.885);
+  /* Sidebar tokens are unused since the top navigation (kept for components/ui). */
+  --sidebar: oklch(0.97 0.006 285);
+  --sidebar-foreground: oklch(0.2 0.035 280);
+  --sidebar-primary: oklch(0.515 0.235 279);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(1 0 0);
+  --sidebar-accent-foreground: oklch(0.2 0.035 280);
+  --sidebar-border: oklch(0.915 0.012 285);
+  --sidebar-ring: oklch(0.515 0.235 279);
 }
 
-/* ── Dark mode — exact shadcn zinc-950 palette ── */
+/* ── Dark mode — deep navy ── */
 .dark {
   color-scheme: dark;
 
-  /* zinc-950 #09090b */
-  --background: oklch(0.141 0.005 285.823);
+  --background: oklch(0.15 0.028 280);
+  --foreground: oklch(0.97 0.006 285);
 
-  /* zinc-50 #fafafa */
-  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.195 0.032 280);
+  --card-foreground: oklch(0.97 0.006 285);
 
-  /* zinc-900 #18181b */
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.985 0 0);
+  /* A step lighter than cards so menus float above them. */
+  --popover: oklch(0.225 0.036 280);
+  --popover-foreground: oklch(0.97 0.006 285);
 
-  /* One step lighter than cards, so menus and pop-overs read as floating
-     above the page instead of blending into the card underneath. */
-  --popover: oklch(0.245 0.006 285.885);
-  --popover-foreground: oklch(0.985 0 0);
+  /* Brighter indigo for dark surfaces, still white text (≥ 4.5:1). */
+  --primary: oklch(0.57 0.225 280);
+  --primary-foreground: oklch(0.99 0 0);
 
-  /* white primary — matches shadcn default dark */
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.21 0.006 285.885);
+  --secondary: oklch(0.25 0.035 280);
+  --secondary-foreground: oklch(0.97 0.006 285);
 
-  /* zinc-800 #27272a */
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.25 0.035 280);
+  --muted-foreground: oklch(0.72 0.03 282);
 
-  /* zinc-800 */
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.552 0.016 285.938 / 0.9);
+  --accent: oklch(0.27 0.045 280);
+  --accent-foreground: oklch(0.97 0.006 285);
 
-  /* zinc-800 */
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(0.985 0 0);
+  --highlight: oklch(0.9 0.2 125);
+  --highlight-foreground: oklch(0.25 0.06 130);
 
   --destructive: oklch(0.704 0.191 22.216);
 
-  /* zinc-800 */
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.552 0.016 285.938);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.68 0.18 280);
 
-  --success: oklch(0.70 0.165 155);
-  --warning: oklch(0.80 0.175 75);
-  --info: oklch(0.68 0.165 240);
+  --success: oklch(0.72 0.165 155);
+  --warning: oklch(0.8 0.175 75);
+  --info: oklch(0.7 0.16 240);
 
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
@@ -178,15 +178,22 @@
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
 
-  /* sidebar = zinc-900, slightly lighter than background */
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.985 0 0);
-  --sidebar-primary-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.552 0.016 285.938);
+  --sidebar: oklch(0.13 0.026 280);
+  --sidebar-foreground: oklch(0.97 0.006 285);
+  --sidebar-primary: oklch(0.57 0.225 280);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.195 0.032 280);
+  --sidebar-accent-foreground: oklch(0.97 0.006 285);
+  --sidebar-border: oklch(1 0 0 / 9%);
+  --sidebar-ring: oklch(0.68 0.18 280);
+
+  /* Dark shadows: a light hairline plus a deep drop. */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.45);
+  --shadow-md: 0 0 0 1px rgb(255 255 255 / 0.06), 0 10px 28px -10px rgb(0 0 0 / 0.65);
+  --shadow-lg: 0 0 0 1px rgb(255 255 255 / 0.07), 0 18px 40px -10px rgb(0 0 0 / 0.75);
+  --shadow-xl: 0 0 0 1px rgb(255 255 255 / 0.07), 0 24px 48px -12px rgb(0 0 0 / 0.8);
+  --shadow-2xl: 0 0 0 1px rgb(255 255 255 / 0.07), 0 32px 64px -16px rgb(0 0 0 / 0.85);
 }
 
 @layer base {
@@ -195,6 +202,8 @@
   }
 
   html {
+    /* Keeps anchors and the skip link clear of the sticky top navigation. */
+    scroll-padding-top: 5rem;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
     /* Inter supports these OpenType features */
@@ -207,6 +216,11 @@
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2 {
+    font-family: var(--font-display);
   }
 
   h1 {
@@ -251,6 +265,16 @@
 
 /* ── Utility classes ── */
 @layer utilities {
+  /* Soft brand glow behind the top of every app page. */
+  .app-backdrop {
+    background-image: radial-gradient(
+      1100px 420px at 50% -160px,
+      color-mix(in oklch, var(--primary) 13%, transparent),
+      transparent 72%
+    );
+    background-repeat: no-repeat;
+  }
+
   .glass {
     @apply bg-white/5 backdrop-blur-xl border border-white/10;
   }
@@ -336,6 +360,7 @@
 
   nav,
   header,
+  footer,
   aside,
   [data-sidebar],
   [data-sidebar-wrapper] {
@@ -348,6 +373,7 @@
     padding: 0 !important;
     width: 100% !important;
   }
+
 
   .chart-card {
     break-inside: avoid;

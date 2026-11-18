@@ -90,11 +90,14 @@ function TableSkeleton({ rows = 6 }: { rows?: number }) {
 export function DashboardPageSkeleton() {
   return (
     <Loading label="Loading dashboard…">
-      <HeaderSkeleton eyebrow />
-      <StatRow count={4} className="xl:grid-cols-4" />
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(300px,0.75fr)]">
-        <PanelSkeleton height="h-[300px]" />
-        <PanelSkeleton height="h-[300px]" />
+      <HeaderSkeleton actions={2} eyebrow />
+      <div className="grid gap-4 lg:grid-cols-3">
+        <PanelSkeleton className="lg:col-span-2" height="h-[220px]" />
+        <PanelSkeleton height="h-[220px]" />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <PanelSkeleton className="lg:col-span-2" height="h-[280px]" />
+        <PanelSkeleton height="h-[280px]" />
       </div>
     </Loading>
   );
@@ -157,20 +160,79 @@ export function BudgetsPageSkeleton() {
   );
 }
 
+/** Lend & borrow and Wishlist: header, four tiles, then a list panel. */
+export function MoneyPageSkeleton() {
+  return (
+    <Loading label="Loading…">
+      <HeaderSkeleton actions={2} />
+      <StatRow count={4} className="lg:grid-cols-4" />
+      <PanelSkeleton height="h-[320px]" />
+    </Loading>
+  );
+}
+
+export function ProfilePageSkeleton() {
+  return (
+    <Loading label="Loading profile…">
+      <HeaderSkeleton actions={0} eyebrow />
+      <div aria-hidden className="bg-card overflow-hidden rounded-2xl shadow-md">
+        <Skeleton className="h-28 rounded-none sm:h-36" />
+        <div className="space-y-6 px-5 pb-6 sm:px-6">
+          <div className="-mt-10 flex items-end gap-4 sm:-mt-12">
+            <Skeleton className="ring-card size-24 rounded-full ring-4" />
+            <div className="space-y-2 pb-1">
+              <Skeleton className="h-6 w-40 rounded-full" />
+              <Skeleton className="h-4 w-52 rounded-full" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }, (_, i) => (
+              <Skeleton key={i} className="h-16 rounded-xl" />
+            ))}
+          </div>
+        </div>
+      </div>
+      <Skeleton aria-hidden className="h-9 w-80 max-w-full rounded-lg" />
+      <div className="grid gap-4 lg:grid-cols-3">
+        <PanelSkeleton className="lg:col-span-2" height="h-[320px]" />
+        <PanelSkeleton height="h-[320px]" />
+      </div>
+    </Loading>
+  );
+}
+
+/** The analytics chart grid: trend + categories, then budget + year comparison. */
+export function AnalyticsChartsSkeleton() {
+  return (
+    <div aria-hidden className="space-y-4">
+      <div className="grid gap-4 lg:grid-cols-3">
+        <PanelSkeleton className="lg:col-span-2" height="h-[300px]" />
+        <PanelSkeleton height="h-[300px]" />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <PanelSkeleton height="h-[300px]" />
+        <PanelSkeleton height="h-[300px]" />
+      </div>
+    </div>
+  );
+}
+
+/** Six overview tiles + charts; used by the route and while the page loads data. */
+export function AnalyticsBodySkeleton() {
+  return (
+    <>
+      <StatRow count={6} className="lg:grid-cols-3" />
+      <AnalyticsChartsSkeleton />
+    </>
+  );
+}
+
 export function AnalyticsPageSkeleton() {
   return (
     <Loading label="Loading analytics…">
       <HeaderSkeleton actions={2} eyebrow />
       <Skeleton aria-hidden className="h-14 w-full rounded-2xl" />
-      <div aria-hidden className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {Array.from({ length: 6 }, (_, i) => (
-          <Skeleton key={i} className="h-[124px] rounded-xl" />
-        ))}
-      </div>
-      <div className="grid gap-5 lg:grid-cols-3">
-        <PanelSkeleton className="lg:col-span-2" height="h-[280px]" />
-        <PanelSkeleton height="h-[280px]" />
-      </div>
+      <AnalyticsBodySkeleton />
     </Loading>
   );
 }

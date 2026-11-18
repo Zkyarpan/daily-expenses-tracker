@@ -20,11 +20,13 @@ interface StatCardProps {
   delta?: StatCardDelta;
   hint?: React.ReactNode;
   icon?: LucideIcon;
-  label: string;
+  /** Usually plain text; may include an inline info tooltip trigger. */
+  label: React.ReactNode;
   value: React.ReactNode;
 }
 
-function Delta({ delta }: { delta: StatCardDelta }) {
+/** Tinted change chip: arrow + sign + colour, so it never relies on colour alone. */
+export function Delta({ delta }: { delta: StatCardDelta }) {
   if (delta.value === null || !Number.isFinite(delta.value)) {
     return <span>No earlier data to compare</span>;
   }
@@ -69,7 +71,7 @@ export function StatCard({
     <Card className={cn("gap-0 py-0", className)}>
       <div className="flex h-full flex-col gap-2.5 p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
-          <p className="text-muted-foreground text-sm font-medium">{label}</p>
+          <div className="text-muted-foreground text-sm font-medium">{label}</div>
           {Icon && (
             <span className="bg-muted text-muted-foreground -mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg">
               <Icon aria-hidden className="size-4" />

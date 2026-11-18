@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono, Plus_Jakarta_Sans } from "next/font/google";
 
 import { RouteProgress } from "@/components/layout/RouteProgress";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
-import { Toaster } from "@/components/ui/sonner";
+import { AppToaster } from "@/components/shared/AppToaster";
+import { SITE } from "@/lib/site";
 
 import "./globals.css";
 
@@ -15,10 +16,10 @@ import { Providers } from "./providers";
  * preload=true ensures the font is loaded before paint.
  */
 const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
   display: "swap",
   preload: true,
+  subsets: ["latin"],
+  variable: "--font-inter",
 });
 
 /*
@@ -26,24 +27,75 @@ const inter = Inter({
  * Used for currency amounts, amounts in tables, etc.
  */
 const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
   display: "swap",
   preload: false,
+  subsets: ["latin"],
+  variable: "--font-mono",
   weight: ["400", "500", "600", "700"],
 });
 
+/*
+ * Plus Jakarta Sans — display face for page titles and headings (h1/h2 use
+ * var(--font-display)), giving the app its own character next to Inter.
+ */
+const jakarta = Plus_Jakarta_Sans({
+  display: "swap",
+  preload: true,
+  subsets: ["latin"],
+  variable: "--font-jakarta",
+  weight: ["600", "700", "800"],
+});
+
 export const metadata: Metadata = {
-  description:
-    "A focused workspace for tracking daily expenses and spending trends.",
-  title: "Daily Expenses Tracker",
+  appleWebApp: { capable: true, statusBarStyle: "default", title: SITE.name },
+  applicationName: SITE.name,
+  authors: [{ name: SITE.name }],
+  category: "finance",
+  creator: SITE.name,
+  description: SITE.description,
+  formatDetection: { address: false, email: false, telephone: false },
+  keywords: [...SITE.keywords],
+  metadataBase: new URL(SITE.url),
+  openGraph: {
+    description: SITE.description,
+    locale: "en_GB",
+    siteName: SITE.name,
+    title: `${SITE.name} — ${SITE.tagline}`,
+    type: "website",
+    url: "/",
+  },
+  robots: { follow: true, index: true },
+  title: {
+    default: `${SITE.name} — ${SITE.tagline}`,
+    template: `%s · ${SITE.name}`,
+  },
+  twitter: {
+    card: "summary_large_image",
+    description: SITE.description,
+    title: `${SITE.name} — ${SITE.tagline}`,
+  },
 };
 
 export const viewport: Viewport = {
+  colorScheme: "light dark",
   themeColor: [
-    { color: "#ffffff", media: "(prefers-color-scheme: light)" },
-    { color: "#09090b", media: "(prefers-color-scheme: dark)" },
+    { color: SITE.themeColor.light, media: "(prefers-color-scheme: light)" },
+    { color: SITE.themeColor.dark, media: "(prefers-color-scheme: dark)" },
   ],
+};
+
+/** Structured data so search engines understand what the app is. */
+const JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  applicationCategory: "FinanceApplication",
+  browserRequirements: "Requires JavaScript",
+  description: SITE.description,
+  inLanguage: "en-GB",
+  isAccessibleForFree: true,
+  name: SITE.name,
+  operatingSystem: "Any",
+  url: SITE.url,
 };
 
 export default function RootLayout({
@@ -53,11 +105,16 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
-      className={`${inter.variable} ${jetbrainsMono.variable}`}
+      lang="en-GB"
+      className={`${inter.variable} ${jakarta.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
       <body className="font-sans antialiased">
+        <script
+          type="application/ld+json"
+          // Static, app-defined JSON (no user input), escaped for <script>.
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD).replace(/</g, "\\u003c") }}
+        />
         <Providers>
           <ThemeProvider
             attribute="class"
@@ -68,7 +125,7 @@ export default function RootLayout({
             <RouteProgress />
             {children}
           </ThemeProvider>
-          <Toaster />
+          <AppToaster />
         </Providers>
       </body>
     </html>
